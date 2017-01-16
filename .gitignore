@@ -1,0 +1,17 @@
+.idea/
+temp/
+logs/
+*.log
+*.pyc
+*.pkl
+*.csv
+*_test.ipynb
+*_temp.ipynb
+*.ipynb_checkpoints
+*.txt
+temp*
+Untitled*.ipynb
+*_test.py
+*_temp.py
+*.data
+other/
