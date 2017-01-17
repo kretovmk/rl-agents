@@ -1,6 +1,12 @@
 
 import tensorflow as tf
+import numpy as np
 import os
+
+from memory import ReplayMemory
+from utils import floatX
+
+#TODO: 1. double dqn, 2. duelling 3. prioritized exp replay, 4. optimality tightening
 
 
 class QvalueEstimatorBase(object):
@@ -68,7 +74,7 @@ class QvalueEstimatorBase(object):
         raise NotImplementedError
 
 
-class QvalueEstimatorConv(QvalueEstimator):
+class QvalueEstimatorConv(QvalueEstimatorBase):
     """
     Convolutional neural network for Atari games.
     """
@@ -120,6 +126,30 @@ def deep_q_learning(sess,
                     eps_decay_steps=500000,
                     batch_size=128,
                     record_video_freq=50):
+    replay_memory = ReplayMemory(max_steps=replay_memory_size,
+                                 state_shape=q_model.inp_shape,
+                                 state_dtype=floatX,
+                                 num_continuous=0)
+    checkpoints_dir = os.path.join(experiments_folder, 'checkpoints')
+    checkpoints_path = os.path.join(checkpoints_dir, 'model')
+    monitor_path = os.path.join(checkpoints_dir, 'monitor')
+
+
+    if not os.path.exists(checkpoints_dir):
+        os.makedirs(checkpoints_dir)
+    if not os.path.exists(monitor_path):
+        os.makedirs(monitor_path)
+
+    saver = tf.train.Saver()
+    latest_checkpoint = tf.train.latest_checkpoint(checkpoints_dir)
+    if latest_checkpoint:
+        print 'Loading model checkpoint {}'.format(latest_checkpoint)
+        saver.restore(sess, latest_checkpoint)
+
+    total_t = sess.run(tf.contrb.framework.get_global_step())
+    epsilons = np.linspace()
+
+
 
 
 
