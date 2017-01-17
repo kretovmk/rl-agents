@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/dd210/Desktop/rl-agents/dqn/experiments/CartPole-v0/checkpoints/model"
+all_model_checkpoint_paths: "/home/dd210/Desktop/rl-agents/dqn/experiments/CartPole-v0/checkpoints/model"

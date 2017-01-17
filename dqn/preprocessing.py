@@ -18,5 +18,16 @@ class AtariImgProcessor(object):
             self.out = tf.image.resize_images(self.out, *resize_shape, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
             #tf.to_float(self.X_pl) / 255.0
 
-    def process_frame(self, sess, image):
+    def process(self, sess, image):
         return sess.run(self.out, feed_dict={self.inp: image})
+
+
+class EmptyProcessor(object):
+    """
+    Does nothing.
+    """
+    def __init__(self):
+        pass
+
+    def process(self, sess, state):
+        return state

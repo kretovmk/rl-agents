@@ -21,10 +21,10 @@ class ReplayMemory(object):
         # initialize storing arrays
         self.states = self._init_batch(max_steps, state_shape, state_dtype)
         self.next_states = self._init_batch(max_steps, state_shape, state_dtype)
-        self.rewards = np.zeros(max_steps, dtype=floatX)
+        self.rewards = np.zeros(max_steps, dtype=np.float32)
         self.terminals = np.zeros(max_steps, dtype=np.bool)
         if num_continuous > 0:
-            self.actions = np.zeros((max_steps, num_continuous), dtype=floatX)
+            self.actions = np.zeros((max_steps, num_continuous), dtype=np.float32)
             self.action_shape = (num_continuous,)
             self.action_dtype = floatX
         else:
@@ -49,10 +49,10 @@ class ReplayMemory(object):
     def get_random_batch(self, batch_size, n_steps):
         assert self.size > 2 * n_steps, 'Not enough samples in replay memory.'
         states = self._init_batch(batch_size, self.state_shape, self.state_dtype)
-        next_states = self._init_batch(batch_size, (1,), dtype=self.state_dtype)
+        next_states = self._init_batch(batch_size, self.state_shape, dtype=self.state_dtype)
         actions = self._init_batch(batch_size, self.action_shape, self.action_dtype)
-        rewards = self._init_batch(batch_size, (n_steps,), dtype=floatX)
-        inv_rewards = self._init_batch(batch_size, (n_steps,), dtype=floatX)
+        rewards = self._init_batch(batch_size, (n_steps,), dtype=np.float32)
+        inv_rewards = self._init_batch(batch_size, (n_steps,), dtype=np.float32)
         terminals = self._init_batch(batch_size, shape=(1,), dtype='bool')
         inv_terminals = self._init_batch(batch_size, shape=(1,), dtype='bool')
         count = 0
@@ -69,7 +69,7 @@ class ReplayMemory(object):
             else:
                 ix_end_inv = n_steps
             states[count] = self.states.take(ix, axis=0)
-            next_states[count] = self.next_states.take(ix_end, axis=0)
+            next_states[count] = self.next_states.take(ix+ix_end, axis=0)
             actions[count] = self.actions.take(ix, axis=0)
             rewards[count, :ix_end] = self.rewards.take(range(ix, ix+ix_end), axis=0)
             inv_rewards[count, :ix_end_inv] = self.rewards.take(range(ix-ix_end_inv, ix), axis=0)
