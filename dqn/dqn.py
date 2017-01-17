@@ -9,8 +9,8 @@ from memory import ReplayMemory
 from utils import floatX, EpisodeStats
 from preprocessing import EmptyProcessor
 
-#TODO: 1. double dqn, 2. duelling 3. prioritized exp replay, 4. optimality tightening
-
+# TODO: 1. double dqn, 2. duelling 3. prioritized exp replay, 4. optimality tightening
+# TODO: add testing period (evaluation)
 # TODO: amend that ReplayMemory is for discrete and cont, and Q-learn is only for cont
 
 
@@ -228,6 +228,7 @@ def deep_q_learning(sess,
 
             if terminal or t == 1000:
                 print i_episode, t, eps
+                print q_values_next_target, targets
                 break
 
             state = next_state
@@ -278,6 +279,6 @@ if __name__ == '__main__':
                         gamma=0.9,
                         eps_start=1.0,
                         eps_end=0.1,
-                        eps_decay_steps=50100,
-                        batch_size=32)
+                        eps_decay_steps=1000,
+                        batch_size=1)
 
