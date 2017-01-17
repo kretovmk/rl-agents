@@ -1,15 +1,13 @@
 
 import numpy as np
 
-from utils import make_list
-
-
 # TODO: add n_steps, prioritized sampling
 
 class ReplayMemory(object):
     """
     A utility class for experience replay.
     The code is adapted from https://github.com/openai/rllab
+    Some small changes + added function for n_step random batch.
     """
 
     def __init__(self,
@@ -43,6 +41,7 @@ class ReplayMemory(object):
         self.concat_length = concat_length
         self.observation_dtype = observation_dtype
         self.action_dtype = action_dtype
+        self.extras = None
         if rng:
             self.rng = rng
         else:
@@ -110,7 +109,7 @@ class ReplayMemory(object):
         else:
             return state
 
-    def random_batch(self, batch_size=32, index=None):
+    def get_random_batch(self, batch_size=32, hard_index=None):
         """
         Return corresponding observations, actions, rewards, terminal status,
         and next_observations for batch_size randomly chosen state transitions.
@@ -150,11 +149,15 @@ class ReplayMemory(object):
         count = 0
         while count < batch_size:
             # Randomly choose a time step from the replay memory.
-            if not index:
+            if not hard_index:
                 index = self.rng.randint(
                     self.bottom,
                     self.bottom + self.size - self.concat_length
                 )
+            else:
+                index = hard_index
+                assert batch_size == 1, 'Inconsistency: hard indexing is used and batch size > 1.'
+
 
             initial_indices = np.arange(index, index + self.concat_length)
             transition_indices = initial_indices + 1
@@ -210,7 +213,7 @@ class ReplayMemory(object):
         batch_backward = []
 
         for i in xrange(batch_size):
-            start_transition = self.random_batch(batch_size=1)
+            start_transition = self.get_random_batch(batch_size=1)
             start_index = start_transition['index'][0]
             n_step_forward = start_transition
 
@@ -219,7 +222,7 @@ class ReplayMemory(object):
                 transition = start_transition
                 if not transition['terminals'][0, 0]:
                     ix = transition['index'][0]
-                    transition = self.random_batch(batch_size=1, index=ix+1)
+                    transition = self.get_random_batch(batch_size=1, hard_index=ix+1)
                     for k, v in transition.iteritems():
                         n_step_forward[k] = np.concatenate((v, n_step_forward[k]), axis=0)
                 else:
@@ -228,12 +231,12 @@ class ReplayMemory(object):
 
             # backward pass
             if backward:
-                transition = self.random_batch(batch_size=1, index=start_index-1)
+                transition = self.get_random_batch(batch_size=1, hard_index=start_index-1)
                 n_step_backward = transition
                 for j in xrange(1, n_steps):
                     if not transition['terminals'][0, 0]:
                         ix = transition['index'][0]
-                        transition = self.random_batch(batch_size=1, index=ix-1)
+                        transition = self.get_random_batch(batch_size=1, hard_index=ix-1)
                         for k, v in transition.iteritems():
                             n_step_backward[k] = np.concatenate((v, n_step_backward[k]), axis=0)
                     else:

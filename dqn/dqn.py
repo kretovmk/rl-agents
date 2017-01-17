@@ -11,7 +11,7 @@ from preprocessing import EmptyProcessor
 
 # TODO: 1. double dqn, 2. duelling 3. prioritized exp replay, 4. optimality tightening
 # TODO: add testing period (evaluation)
-# TODO: amend that ReplayMemory is for discrete and cont, and Q-learn is only for cont
+# TODO: amend that ReplayMemory is for discrete and cont, and Q-learn is only for discrete
 
 
 class QvalueEstimatorBase(object):
@@ -38,15 +38,15 @@ class QvalueEstimatorBase(object):
     def _build_model(self):
         self.state_ph = tf.placeholder(shape=(None,) + self.inp_shape, dtype=tf.float32, name='x')
         self.target_ph = tf.placeholder(shape=(None,), dtype=tf.float32, name='y')
-        self.actions_ph = tf.placeholder(shape=(None,), dtype=tf.int32, name='actions')
+        self.actions_ph = tf.placeholder(shape=(None, 1), dtype=tf.int32, name='actions')
         self.q_all = self._build_network()
-        self.actions_one_hot = tf.one_hot(self.actions_ph, self.n_actions, dtype=tf.float32)
+        self.actions_one_hot = tf.one_hot(tf.squeeze(self.actions_ph, axis=1), self.n_actions, dtype=tf.float32)
         self.q = tf.reduce_sum(tf.mul(self.actions_one_hot, self.q_all), reduction_indices=[1])
         self.losses = tf.squared_difference(self.q, self.target_ph)
         self.loss = tf.reduce_mean(self.losses)
         self.optimizer = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.999)
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
-        self.train_op = self.optimizer.minimize(self.loss, global_step=global_step)
+        self.train_op = self.optimizer.minimize(self.loss, global_step=self.global_step)
         self.summaries = tf.summary.merge([
             tf.summary.scalar('loss', self.loss),
             tf.summary.histogram('loss_histogram', self.losses),
@@ -98,9 +98,9 @@ class QvalueEstimatorDense(QvalueEstimatorBase):
         super(QvalueEstimatorDense, self).__init__(*args, **kwargs)
 
     def _build_network(self):
-        fc1 = tf.contrib.layers.fully_connected(self.state_ph, 128)
-        fc2 = tf.contrib.layers.fully_connected(fc1, 32)
-        out = tf.contrib.layers.fully_connected(fc2, self.n_actions)
+        fc1 = tf.contrib.layers.fully_connected(self.state_ph, 16)
+        #fc2 = tf.contrib.layers.fully_connected(fc1, 32)
+        out = tf.contrib.layers.fully_connected(fc1, self.n_actions)
         return out
 
 
@@ -120,13 +120,17 @@ def deep_q_learning(sess,
                     eps_decay_steps=500000,
                     batch_size=128,
                     record_video_freq=500):
-    replay_memory = ReplayMemory(max_steps=replay_memory_size,
-                                 state_shape=q_model.inp_shape,
-                                 state_dtype=np.float32,
-                                 num_continuous=0)
-    stats = EpisodeStats(
-        episode_lengths=np.zeros(num_episodes),
-        episode_rewards=np.zeros(num_episodes))
+
+    replay_memory = ReplayMemory(observation_shape=q_model.inp_shape,
+                                 action_dim=1,
+                                 max_steps=replay_memory_size,
+                                 observation_dtype=np.float32,
+                                 action_dtype=np.int32,
+                                 concat_observations=False,
+                                 concat_length=1)
+
+    stats = EpisodeStats(episode_lengths=np.zeros(num_episodes),
+                         episode_rewards=np.zeros(num_episodes))
 
     checkpoints_dir = os.path.join(experiments_folder, 'checkpoints')
     checkpoints_path = os.path.join(checkpoints_dir, 'model')
@@ -161,7 +165,7 @@ def deep_q_learning(sess,
 
         next_state, reward, terminal, _ = env.step(action)
         next_state = state_processor.process(sess, next_state)
-        replay_memory.add_sample(state, action, reward, next_state, terminal)
+        replay_memory.add_sample(state, action, reward, terminal)
         if terminal:
             state = env.reset()
             state = state_processor.process(sess, state)
@@ -198,14 +202,20 @@ def deep_q_learning(sess,
 
             next_state, reward, terminal, _ = env.step(action)
             next_state = state_processor.process(sess, next_state)
-            replay_memory.add_sample(state, action, reward, next_state, terminal)
+            replay_memory.add_sample(state, action, reward, terminal)
 
 
             stats.episode_rewards[i_episode] += reward
             stats.episode_lengths[i_episode] = t
 
-            states, actions, rewards, terminals, next_states, _, _ = \
-                replay_memory.get_random_batch(batch_size, n_steps=1)
+            batch = replay_memory.get_random_batch(batch_size=batch_size)
+            states = batch['observations']
+            actions = batch['actions']
+            rewards = batch['rewards']
+            terminals = batch['terminals']
+            next_states = batch['next_observations']
+
+
 
             # double DQN
             q_values_next = q_model.predict_q_values(sess, next_states)
@@ -216,8 +226,8 @@ def deep_q_learning(sess,
             loss = q_model.update_step(sess, states, targets.flatten(), actions)
 
             if terminal or t == 1000:
-                print i_episode, t, eps, sess.run(global_step)
-                print q_values_next_target, targets
+                print i_episode, t, eps, q_values_next_target[-1], sess.run(q_model.global_step)
+                #print q_values_next_target, rewards, targets, terminal, terminals
                 break
 
             state = next_state
@@ -241,33 +251,4 @@ def deep_q_learning(sess,
     env.monitor.close()
 
     return stats
-
-
-if __name__ == '__main__':
-    tf.reset_default_graph()
-    env = gym.make('CartPole-v0')
-    experiment_dir = os.path.abspath("./experiments/{}".format(env.spec.id))
-    global_step = tf.Variable(0, name='global_step', trainable=False)
-
-    q_model = QvalueEstimatorDense(inp_shape=(4,), n_actions=2, scope="q", sum_dir=experiment_dir)
-    target_model = QvalueEstimatorDense(inp_shape=(4,), n_actions=2, scope="target_q", sum_dir=experiment_dir)
-    state_processor = EmptyProcessor()
-
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        deep_q_learning(sess=sess,
-                        env=env,
-                        q_model=q_model,
-                        target_model=target_model,
-                        state_processor=state_processor,
-                        num_episodes=10000,
-                        experiments_folder=experiment_dir,
-                        replay_memory_size=500000,
-                        replay_memory_size_init=50000,
-                        upd_target_freq=100,
-                        gamma=0.9,
-                        eps_start=1.0,
-                        eps_end=0.05,
-                        eps_decay_steps=1000,
-                        batch_size=1)
 
