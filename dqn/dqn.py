@@ -6,7 +6,7 @@ import gym
 import os
 
 from memory import ReplayMemory
-from utils import floatX, EpisodeStats
+from utils import floatX, EpisodeStats, copy_parameters
 from preprocessing import EmptyProcessor
 
 # TODO: 1. double dqn, 2. duelling 3. prioritized exp replay, 4. optimality tightening
@@ -33,7 +33,7 @@ class QvalueEstimatorBase(object):
                 summary_folder = os.path.join(sum_dir, 'summary_{}'.format(scope))
                 if not os.path.exists(sum_dir):
                     os.makedirs(sum_dir)
-                self.summary_writer = tf.train.SummaryWriter(summary_folder)
+                self.summary_writer = tf.summary.FileWriter(summary_folder)
 
     def _build_model(self):
         self.state_ph = tf.placeholder(shape=(None,) + self.inp_shape, dtype=tf.float32, name='x')
@@ -45,12 +45,13 @@ class QvalueEstimatorBase(object):
         self.losses = tf.squared_difference(self.q, self.target_ph)
         self.loss = tf.reduce_mean(self.losses)
         self.optimizer = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.999)
-        self.train_op = self.optimizer.minimize(self.loss, global_step=tf.contrib.framework.get_global_step())
-        self.summaries = tf.merge_summary([
-            tf.scalar_summary('loss', self.loss),
-            tf.histogram_summary('loss_histogram', self.losses),
-            tf.histogram_summary('q_values_histogram', self.q_all),
-            tf.scalar_summary('max_q_value', tf.reduce_max(self.q_all))
+        self.global_step = tf.Variable(0, name='global_step', trainable=False)
+        self.train_op = self.optimizer.minimize(self.loss, global_step=global_step)
+        self.summaries = tf.summary.merge([
+            tf.summary.scalar('loss', self.loss),
+            tf.summary.histogram('loss_histogram', self.losses),
+            tf.summary.histogram('q_values_histogram', self.q_all),
+            tf.summary.scalar('max_q_value', tf.reduce_max(self.q_all))
         ])
 
     def predict_q_values(self, sess, states):
@@ -103,18 +104,6 @@ class QvalueEstimatorDense(QvalueEstimatorBase):
         return out
 
 
-def copy_parameters(sess, model_1, model_2):
-    model_1_params = [t for t in tf.trainable_variables() if t.name.startswith(model_1.scope)]
-    model_1_params = sorted(model_1_params, key=lambda v: v.name)
-    model_2_params = [t for t in tf.trainable_variables() if t.name.startswith(model_2.scope)]
-    model_2_params = sorted(model_2_params, key=lambda v: v.name)
-    update_ops = []
-    for p1, p2 in zip(model_1_params, model_2_params):
-        op = p2.assign(p1)
-        update_ops.append(op)
-    sess.run(update_ops)
-
-
 def deep_q_learning(sess,
                     env,
                     q_model,
@@ -155,7 +144,7 @@ def deep_q_learning(sess,
         print 'Loading model checkpoint {} ..'.format(latest_checkpoint)
         saver.restore(sess, latest_checkpoint)
 
-    total_t = sess.run(tf.contrib.framework.get_global_step())
+    total_t = sess.run(q_model.global_step)
     epsilons = np.linspace(eps_start, eps_end, eps_decay_steps)
 
     print 'Populating replay memory..'
@@ -179,8 +168,8 @@ def deep_q_learning(sess,
         else:
             state = next_state
 
-    # TODO: fix this.. doesn't work
     # TODO: fix eps schedule -- now doesn't work as it should
+    # TODO: fix this.. doesn't work
     #env.monitor.start(monitor_path, resume=True, video_callable=lambda count: count % record_video_freq == 0)
 
     for i_episode in xrange(num_episodes):
@@ -227,7 +216,7 @@ def deep_q_learning(sess,
             loss = q_model.update_step(sess, states, targets.flatten(), actions)
 
             if terminal or t == 1000:
-                print i_episode, t, eps
+                print i_episode, t, eps, sess.run(global_step)
                 print q_values_next_target, targets
                 break
 
@@ -278,7 +267,7 @@ if __name__ == '__main__':
                         upd_target_freq=100,
                         gamma=0.9,
                         eps_start=1.0,
-                        eps_end=0.1,
+                        eps_end=0.05,
                         eps_decay_steps=1000,
                         batch_size=1)
 
