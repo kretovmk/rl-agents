@@ -109,7 +109,6 @@ class QvalueEstimatorDense(QvalueEstimatorBase):
         return out
 
 
-
 def deep_q_learning(sess,
                     env,
                     q_model,
@@ -125,7 +124,7 @@ def deep_q_learning(sess,
                     eps_end=0.1,
                     eps_decay_steps=500000,
                     batch_size=128,
-                    record_video_freq=50):
+                    record_video_freq=500):
     replay_memory = ReplayMemory(max_steps=replay_memory_size,
                                  state_shape=q_model.inp_shape,
                                  state_dtype=floatX,
@@ -143,11 +142,44 @@ def deep_q_learning(sess,
     saver = tf.train.Saver()
     latest_checkpoint = tf.train.latest_checkpoint(checkpoints_dir)
     if latest_checkpoint:
-        print 'Loading model checkpoint {}'.format(latest_checkpoint)
+        print 'Loading model checkpoint {} ..'.format(latest_checkpoint)
         saver.restore(sess, latest_checkpoint)
 
-    total_t = sess.run(tf.contrb.framework.get_global_step())
-    epsilons = np.linspace()
+    total_t = sess.run(tf.contrib.framework.get_global_step())
+    epsilons = np.linspace(eps_start, eps_end, eps_decay_steps)
+
+    print 'Populating replay memory..'
+
+    state = env.reset()
+    state = state_processor(sess, state)  # TODO: why stack in Denny Britz's code?
+    for i in xrange(replay_memory_size_init):
+        eps = epsilons[min(total_t, eps_decay_steps - 1)]
+        if np.random.rand() < eps:
+            action = np.random.randint(0, q_model.n_actions)
+        else:
+            action_probs = q_model.predict_q_values(sess, [state])
+            action = np.argmax(action_probs)
+
+        next_state, reward, terminal, _ = env.step(action)
+        next_state = state_processor.process(sess, next_state)
+        replay_memory.add_sample(state, action, reward, next_state, terminal)
+        if terminal:
+            state = env.reset()
+            state = state_processor(sess, state)
+        else:
+            state = next_state
+
+    env.monitor.start(monitor_path, resume=True, video_callable=lambda count: count % record_video_freq == 0)
+
+    for i_episode in xrange(num_episodes):
+        saver.save()
+
+
+
+
+
+
+
 
 
 
