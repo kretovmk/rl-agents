@@ -61,20 +61,16 @@ assert CONCAT_STATES >= 1, 'CONCAT_STATES should be >= 1.'
 
 if __name__ == '__main__':
 
-    tf.reset_default_graph()
-
+    # creating env, approximators, memory and preprocessing
     env = gym.make(ENV_NAME)
-
     q_model = QvalueEstimatorDense(inp_shape=ENV_STATE_SHAPE,
                                    n_actions=N_ACTIONS,
                                    scope="q",
                                    sum_dir=EXP_FOLDER)
-
     target_model = QvalueEstimatorDense(inp_shape=ENV_STATE_SHAPE,
                                         n_actions=N_ACTIONS,
                                         scope="target_q",
                                         sum_dir=EXP_FOLDER)
-
     replay_memory = ReplayMemory(observation_shape=ENV_STATE_SHAPE,
                                  action_dim=1,
                                  max_steps=REPLAY_MEMORY_SIZE,
@@ -82,27 +78,53 @@ if __name__ == '__main__':
                                  action_dtype=np.int32,
                                  concat_observations=CONCAT_STATES > 1,
                                  concat_length=CONCAT_STATES)
-
     state_processor = EmptyProcessor()
 
+    # looking for checkpoints
+    checkpoints_dir = os.path.join(EXP_FOLDER, 'checkpoints')
+    checkpoints_path = os.path.join(checkpoints_dir, 'model')
+    monitor_path = os.path.join(checkpoints_dir, 'monitor')
+    if not os.path.exists(checkpoints_dir):
+        os.makedirs(checkpoints_dir)
+    if not os.path.exists(monitor_path):
+        os.makedirs(monitor_path)
+    saver = tf.train.Saver()
+    latest_checkpoint = tf.train.latest_checkpoint(checkpoints_dir)
+
+    # launching calculation
+    tf.reset_default_graph()
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
 
         agent = DQNAgent(sess=sess,
                          env=env,
+                         double_dqn=DOUBLE_DQN,
                          q_model=q_model,
                          target_model=target_model,
                          replay_memory=replay_memory,
-                         state_processor=state_processor)
-
+                         state_processor=state_processor,
+                         upd_target_freq=UPD_TARGET_FREQ,
+                         gamma=0.99,
+                         eps_start=EPS_START,
+                         eps_end=EPS_END,
+                         eps_lambda=EPS_LAMBDA,
+                         batch_size=BATCH_SIZE)
         exploration_agent = RandomAgent(N_ACTIONS)
+
+        if USE_CHECKPOINT:
+            if latest_checkpoint:
+                logging.INFO('Loading model checkpoint {} ..'.format(latest_checkpoint))
+                saver.restore(sess, latest_checkpoint)
+            else:
+                logging.INFO('Could not load model checkpoint from {} ..'.format(latest_checkpoint))
 
         agent.fill_replay_memory(exploration_agent)
 
         for n_episode in xrange(NUM_EPISODES):
+            saver.save(tf.get_default_session(), checkpoints_path)
             if n_episode % EVAL_FREQ == 0:
-                total_rewards = agent.run_episode(test=True)
-                logging.INFO('Episode: {}, Reward: {}, Mode: Test'.format(n_episode, sum(total_rewards)))
+                reward = agent.run_episode(test=True, max_steps=MAX_ENV_STEPS)
+                logging.INFO('Episode: {}, Reward: {}, Mode: Test'.format(n_episode, sum(reward)))
             else:
-                total_rewards = agent.run_episode(test=False)
-                logging.INFO('Episode: {}, Reward: {}, Mode: Train'.format(n_episode, sum(total_rewards)))
+                reward = agent.run_episode(test=False, max_steps=MAX_ENV_STEPS)
+                logging.INFO('Episode: {}, Reward: {}, Mode: Train'.format(n_episode, sum(reward)))
