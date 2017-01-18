@@ -176,7 +176,6 @@ class ReplayMemory(object):
             if self.extras is not None:
                 extras[count] = self.extras.take(end_index, axis=0, mode='wrap')
             next_observations[count] = self.observations.take(transition_indices, axis=0, mode='wrap')
-
             count += 1
 
         # if not self.concat_observations:

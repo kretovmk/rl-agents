@@ -149,7 +149,8 @@ class DQNAgent(object):
 
             if terminal or step == max_steps:
                 if not test:
-                    print q_values_next_target[-1], targets[-1]
+                    #print states
+                    #print next_states
                 return total_reward
 
             state = next_state

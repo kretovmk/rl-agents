@@ -31,7 +31,7 @@ Limitations:
 USE_CHECKPOINT = False    # loading from saved checkpoint if possible
 ENV_NAME = 'CartPole-v0'   # gym's env name
 MAX_ENV_STEPS = 200   # limit for max steps during episode
-CONCAT_LENGTH = 1  # should be >= 1 (mainly needed for concatenation Atari frames)
+CONCAT_LENGTH = 2  # should be >= 1 (mainly needed for concatenation Atari frames)
 ENV_STATE_SHAPE = (4,)   # tuple
 N_ACTIONS = 2   # int; only discrete action space
 EXP_FOLDER = os.path.abspath("./experiments/{}".format(ENV_NAME))
@@ -106,7 +106,7 @@ if __name__ == '__main__':
                          replay_memory=replay_memory,
                          state_processor=state_processor,
                          upd_target_freq=UPD_TARGET_FREQ,
-                         gamma=0.99,
+                         gamma=GAMMA,
                          eps_start=EPS_START,
                          eps_end=EPS_END,
                          eps_lambda=EPS_LAMBDA,
@@ -121,6 +121,8 @@ if __name__ == '__main__':
                 saver.restore(sess, latest_checkpoint)
             else:
                 logger.info('Could not load model checkpoint from {} ..'.format(latest_checkpoint))
+        else:
+            logger.info('Models will be initialized.')
 
         agent.fill_replay_memory(exploration_agent, steps=REPLAY_MEMORY_SIZE_INIT)
 
