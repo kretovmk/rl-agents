@@ -179,11 +179,11 @@ class ReplayMemory(object):
 
             count += 1
 
-        if not self.concat_observations:
+        # if not self.concat_observations:
             # If we're not concatenating observations, we should squeeze the
             # second dimension in observations and next_observations
-            observations = np.squeeze(observations, axis=1)
-            next_observations = np.squeeze(next_observations, axis=1)
+            # observations = np.squeeze(observations, axis=1)
+            # next_observations = np.squeeze(next_observations, axis=1)
 
 
         return dict(
