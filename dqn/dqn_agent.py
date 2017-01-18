@@ -1,5 +1,6 @@
 
 import tensorflow as tf
+import itertools
 import numpy as np
 import logging
 import math
@@ -109,8 +110,7 @@ class DQNAgent(object):
         total_reward = 0.
         state = self.env.reset()
         state = self._process_and_stack(state)
-        step = 0
-        while True:
+        for t in itertools.count():
             if test:
                 action = self.choose_action(state, eps=0.)
             else:
@@ -147,15 +147,15 @@ class DQNAgent(object):
                         * self.gamma * q_values_next_target[np.arange(self.batch_size), best_actions].reshape((-1, 1))
                 loss = self.q_model.update_step(self.sess, states, targets.flatten(), actions)
 
-            if terminal or step == max_steps:
+            if terminal or t == max_steps:
+                episode_summary = tf.Summary()
+                episode_summary.value.add(simple_value=total_reward, node_name="episode_reward",
+                                          tag="episode_reward")
+                self.q_model.summary_writer.add_summary(episode_summary, total_t)
+                self.q_model.summary_writer.flush()
                 return total_reward
 
             state = next_state
-            step += 1
             total_t += 1
 
-            episode_summary = tf.Summary()
-            episode_summary.value.add(simple_value=total_reward, node_name="episode_reward",
-                                      tag="episode_reward")
-            self.q_model.summary_writer.add_summary(episode_summary, total_t)
-            self.q_model.summary_writer.flush()
+
