@@ -31,7 +31,7 @@ Limitations:
 USE_CHECKPOINT = False    # loading from saved checkpoint if possible
 ENV_NAME = 'CartPole-v0'   # gym's env name
 MAX_ENV_STEPS = 200   # limit for max steps during episode
-CONCAT_LENGTH = 2  # should be >= 1 (mainly needed for concatenation Atari frames)
+CONCAT_LENGTH = 1  # should be >= 1 (mainly needed for concatenation Atari frames)
 ENV_STATE_SHAPE = (4,)   # tuple
 N_ACTIONS = 2   # int; only discrete action space
 EXP_FOLDER = os.path.abspath("./experiments/{}".format(ENV_NAME))
@@ -42,7 +42,7 @@ EVAL_FREQ = 100   # evaluate every N env steps
 REPLAY_MEMORY_SIZE = 100000
 REPLAY_MEMORY_SIZE_INIT = 10000
 RECORD_VIDEO_FREQ = 1000
-GAMMA = 0.9
+GAMMA = 0.5
 UPD_TARGET_FREQ = 500
 EPS_START = 1.
 EPS_END = 0.01

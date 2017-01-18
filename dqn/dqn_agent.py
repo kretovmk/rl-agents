@@ -117,7 +117,7 @@ class DQNAgent(object):
                 action = self.choose_action(state, eps=self.eps)
             next_state, reward, terminal, _ = self.env.step(action)
             total_reward += reward
-            next_state = self.state_processor.process(self.sess, state)
+            next_state = self._process_and_stack(next_state)
             self.replay_memory.add_sample(state[-1], action, reward, terminal)
 
             # training
@@ -148,9 +148,6 @@ class DQNAgent(object):
                 loss = self.q_model.update_step(self.sess, states, targets.flatten(), actions)
 
             if terminal or step == max_steps:
-                #if not test:
-                    #print states
-                    #print next_states
                 return total_reward
 
             state = next_state
