@@ -145,10 +145,11 @@ class DQNAgent(object):
                 q_values_next_target = self.target_model.predict_q_values(self.sess, next_states)
                 targets = rewards + np.invert(terminals).astype(np.float32) \
                         * self.gamma * q_values_next_target[np.arange(self.batch_size), best_actions].reshape((-1, 1))
-                #print self.sess, states, targets.flatten(), actions
                 loss = self.q_model.update_step(self.sess, states, targets.flatten(), actions)
 
             if terminal or step == max_steps:
+                if not test:
+                    print q_values_next_target[-1], targets[-1]
                 return total_reward
 
             state = next_state

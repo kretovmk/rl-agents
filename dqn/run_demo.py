@@ -37,7 +37,7 @@ N_ACTIONS = 2   # int; only discrete action space
 EXP_FOLDER = os.path.abspath("./experiments/{}".format(ENV_NAME))
 
 # training options
-NUM_EPISODES = 1000
+NUM_EPISODES = 10000
 EVAL_FREQ = 100   # evaluate every N env steps
 REPLAY_MEMORY_SIZE = 100000
 REPLAY_MEMORY_SIZE_INIT = 10000
@@ -47,7 +47,7 @@ UPD_TARGET_FREQ = 500
 EPS_START = 1.
 EPS_END = 0.01
 EPS_LAMBDA = 0.001
-BATCH_SIZE = 6
+BATCH_SIZE = 1
 
 # q-learning options
 DOUBLE_DQN = True
