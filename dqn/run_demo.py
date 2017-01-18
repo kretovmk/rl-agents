@@ -6,7 +6,7 @@ import gym
 import os
 
 from q_estimator import QvalueEstimatorDense
-from dqn_agent import DQNAgent
+from dqn_agent import DQNAgent, RandomAgent
 from utils import EmptyProcessor
 from memory import ReplayMemory
 
@@ -40,6 +40,9 @@ NUM_EPISODES = 1000
 EVAL_FREQ = 1000   # evaluate every N env steps
 REPLAY_MEMORY_SIZE = 100000
 REPLAY_MEMORY_SIZE_INIT = 10000
+RECORD_VIDEO_FREQ = 1000
+GAMMA = 0.9
+UPD_TARGET_FREQ = 1000
 EPS_START = 1.
 EPS_END = 0.01
 EPS_LAMBDA = 0.001
@@ -82,34 +85,24 @@ if __name__ == '__main__':
 
     state_processor = EmptyProcessor()
 
-    agent = DQNAgent(q_model, target_model, replay_memory, state_processor)
-
-    # agent.fill_replay_memory
-
-    for n_episode in xrange(NUM_EPISODES):
-        #agent.run_episode
-
-        if n_episode % EVAL_FREQ == 0:
-            # agent.run_episode(eps=0)
-
-
-
-
-
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        deep_q_learning(sess=sess,
-                        env=env,
-                        q_model=q_model,
-                        target_model=target_model,
-                        state_processor=state_processor,
-                        num_episodes=10000,
-                        experiments_folder=EXP_FOLDER,
-                        replay_memory_size=100000,
-                        replay_memory_size_init=1000,
-                        upd_target_freq=1000,
-                        gamma=0.9,
-                        eps_start=1.0,
-                        eps_end=0.01,
-                        eps_decay_steps=5000,
-                        batch_size=64)
+
+        agent = DQNAgent(sess=sess,
+                         env=env,
+                         q_model=q_model,
+                         target_model=target_model,
+                         replay_memory=replay_memory,
+                         state_processor=state_processor)
+
+        exploration_agent = RandomAgent(N_ACTIONS)
+
+        agent.fill_replay_memory(exploration_agent)
+
+        for n_episode in xrange(NUM_EPISODES):
+            if n_episode % EVAL_FREQ == 0:
+                total_rewards = agent.run_episode(test=True)
+                logging.INFO('Episode: {}, Reward: {}, Mode: Test'.format(n_episode, sum(total_rewards)))
+            else:
+                total_rewards = agent.run_episode(test=False)
+                logging.INFO('Episode: {}, Reward: {}, Mode: Train'.format(n_episode, sum(total_rewards)))

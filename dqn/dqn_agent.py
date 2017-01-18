@@ -2,6 +2,7 @@
 import tensorflow as tf
 import numpy as np
 import itertools
+import logging
 import os
 
 from memory import ReplayMemory
@@ -10,30 +11,41 @@ from utils import EpisodeStats, copy_parameters
 
 # TODO: concatenation of screens / states. how?
 
+class RandomAgent(object):
+    """
+    Random uniform sampling from discrete action space.
+    """
+    def __init__(self, n_actions):
+        self.n_actions = n_actions
+
+    def choose_action(self, state):
+        return np.random.randint(0, self.n_actions)
+
+
 class DQNAgent(object):
     """
     Class for agent governed by DQN.
     """
     def __init__(self, sess,
-                    env,
-                    q_model,
-                    target_model,
-                    state_processor,
-                    num_episodes,
-                    experiments_folder,
-                    replay_memory_size,
-                    replay_memory_size_init,
-                    upd_target_freq=10000,
-                    gamma=0.99,
-                    eps_start=1.0,
-                    eps_end=0.1,
-                    eps_decay_steps=500000,
-                    batch_size=128,
-                    record_video_freq=500):
+                       env,
+                       q_model,
+                       target_model,
+                       replay_memory,
+                       state_processor,
+                       num_episodes,
+                       upd_target_freq=10000,
+                       gamma=0.99,
+                       eps_start=1.0,
+                       eps_end=0.1,
+                       eps_decay_steps=500000,
+                       batch_size=128,
+                       record_video_freq=500):
         self.sess = sess
+        self.env = env
         self.q_model = q_model
         self.target_model = target_model
         self.replay_memory = replay_memory
+        self.state_processor = state_processor
 
     def choose_action(self, state, eps):
         if np.random.rand() < eps:
@@ -42,6 +54,42 @@ class DQNAgent(object):
             action_probs = self.q_model.predict_q_values(self.sess, [state])
             action = np.argmax(action_probs)
         return action
+
+    def _process_and_stack(self, state):
+        state = self.state_processor.process(self.sess, state)
+        return np.stack([state] * self.replay_memory.concat_observations, axis=0)
+
+    def fill_replay_memory(self, exploration_agent, steps):
+        logging.INFO('Populating replay memory..')
+        state = self.env.reset()
+        state = self._process_and_stack(state)
+        for i in xrange(steps):
+            action = exploration_agent(state)
+            next_state, reward, terminal, _ = self.env.step(action)
+            next_state = self.state_processor.process(self.sess, next_state)
+            self.replay_memory.add_sample(state, action, reward, terminal)
+            if terminal:
+                state = self.env.reset()
+                state = self._process_and_stack(state)
+            else:
+                state = next_state
+
+    def run_episode(self):
+        total_rewards = []
+        state = self.env.reset()
+        state = self._process_and_stack(state)
+        for i in xrange(steps):
+            action = exploration_agent(state)
+            next_state, reward, terminal, _ = self.env.step(action)
+            total_rewards.append(reward)
+            next_state = self.state_processor.process(self.sess, next_state)
+            self.replay_memory.add_sample(state, action, reward, terminal)
+            if terminal:
+                state = self.env.reset()
+                state = self._process_and_stack(state)
+            else:
+                state = next_state
+
 
 
 
@@ -54,9 +102,6 @@ def deep_q_learning(sess,
                     target_model,
                     state_processor,
                     num_episodes,
-                    experiments_folder,
-                    replay_memory_size,
-                    replay_memory_size_init,
                     upd_target_freq=10000,
                     gamma=0.99,
                     eps_start=1.0,
@@ -89,26 +134,7 @@ def deep_q_learning(sess,
     total_t = sess.run(q_model.global_step)
     epsilons = np.linspace(eps_start, eps_end, eps_decay_steps)
 
-    print 'Populating replay memory..'
 
-    state = env.reset()
-    state = state_processor.process(sess, state)  # TODO: why stack in Denny Britz's code? -- see line 334
-    for i in xrange(replay_memory_size_init):
-        eps = epsilons[min(total_t, eps_decay_steps - 1)]
-        if np.random.rand() < eps:
-            action = np.random.randint(0, q_model.n_actions)
-        else:
-            action_probs = q_model.predict_q_values(sess, [state])
-            action = np.argmax(action_probs)
-
-        next_state, reward, terminal, _ = env.step(action)
-        next_state = state_processor.process(sess, next_state)
-        replay_memory.add_sample(state, action, reward, terminal)
-        if terminal:
-            state = env.reset()
-            state = state_processor.process(sess, state)
-        else:
-            state = next_state
 
     # TODO: fix eps schedule -- now doesn't work as it should
     # TODO: fix this.. doesn't work
