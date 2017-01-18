@@ -130,20 +130,11 @@ class ReplayMemory(object):
                 (batch_size,) + self.extras.shape[1:],
                 dtype=self.extras.dtype
             )
-            next_extras = np.zeros(
-                (batch_size,) + self.extras.shape[1:],
-                dtype=self.extras.dtype
-            )
         else:
             extras = None
-            next_extras = None
         next_observations = np.zeros(
             (batch_size, self.concat_length) + self.observation_shape,
             dtype=self.observation_dtype
-        )
-        next_actions = np.zeros(
-            (batch_size, self.action_dim),
-            dtype=self.action_dtype
         )
 
         count = 0
@@ -184,9 +175,7 @@ class ReplayMemory(object):
             terminals[count] = self.terminals.take(end_index, mode='wrap')
             if self.extras is not None:
                 extras[count] = self.extras.take(end_index, axis=0, mode='wrap')
-                next_extras[count] = self.extras.take(transition_indices, axis=0, mode='wrap')
             next_observations[count] = self.observations.take(transition_indices, axis=0, mode='wrap')
-            next_actions[count] = self.actions.take(transition_indices, axis=0, mode='wrap')
 
             count += 1
 
@@ -196,15 +185,14 @@ class ReplayMemory(object):
             observations = np.squeeze(observations, axis=1)
             next_observations = np.squeeze(next_observations, axis=1)
 
+
         return dict(
             observations=observations,
             actions=actions,
             rewards=rewards,
             next_observations=next_observations,
-            next_actions=next_actions,
             terminals=terminals,
             extras=extras,
-            next_extras=next_extras,
             index=np.array([index]),
         )
 

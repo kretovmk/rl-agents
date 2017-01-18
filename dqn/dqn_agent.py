@@ -46,6 +46,7 @@ class DQNAgent(object):
         self.replay_memory = replay_memory
         self.state_processor = state_processor
         self.upd_target_freq = upd_target_freq
+        self.eps = eps_start
         self.eps_start = eps_start
         self.eps_end = eps_end
         self.eps_lambda = eps_lambda
@@ -65,13 +66,13 @@ class DQNAgent(object):
         Make preprocessing and concatenate states if needed.
         """
         state = self.state_processor.process(self.sess, state)
-        if self.replay_memory.concat_observations == 1:
+        if self.replay_memory.concat_length == 1:
             return np.stack([state], axis=0)
         else:
-            if not prev_state:
-                return np.stack([state] * self.replay_memory.concat_observations, axis=0)
+            if prev_state is None:
+                return np.stack([state] * self.replay_memory.concat_length, axis=0)
             else:
-                return np.append(state[1:], np.expand_dims(state, 0), axis=0)
+                return np.append(prev_state[1:], np.expand_dims(state, 0), axis=0)
 
     def _decrease_eps(self, t):
         self.eps = self.eps_end + (self.eps_start - self.eps_end) * math.exp(-self.eps_lambda * t)
@@ -87,10 +88,10 @@ class DQNAgent(object):
         state = self.env.reset()
         state = self._process_and_stack(state)
         for i in xrange(steps):
-            action = exploration_agent(state)
+            action = exploration_agent.choose_action(state)
             next_state, reward, terminal, _ = self.env.step(action)
             next_state = self._process_and_stack(next_state, state)
-            self.replay_memory.add_sample(state, action, reward, terminal)
+            self.replay_memory.add_sample(state[-1], action, reward, terminal)
             if terminal:
                 state = self.env.reset()
                 state = self._process_and_stack(state)
@@ -116,17 +117,17 @@ class DQNAgent(object):
                 action = self.choose_action(state, eps=self.eps)
             next_state, reward, terminal, _ = self.env.step(action)
             total_reward += reward
-            next_state = self.state_processor.process(self.sess, next_state)
-            self.replay_memory.add_sample(state, action, reward, terminal)
+            next_state = self.state_processor.process(self.sess, state)
+            self.replay_memory.add_sample(state[-1], action, reward, terminal)
 
             # training
             if not test:
-                self.replay_memory.add_sample(state, action, reward, terminal)
+                self.replay_memory.add_sample(state[-1], action, reward, terminal)
                 total_t = self.sess.run(self.q_model.global_step)
                 self._decrease_eps(total_t)
                 if total_t % self.upd_target_freq == 0:
                     copy_parameters(self.sess, self.q_model, self.target_model)
-                    logging.info('Training step: {}, weights of target network were updated.'.format(total_t))
+                    logger.info('Training step: {}, weights of target network were updated.'.format(total_t))
                 batch = self.replay_memory.get_random_batch(batch_size=self.batch_size)
                 states = batch['observations']
                 actions = batch['actions']
@@ -144,6 +145,7 @@ class DQNAgent(object):
                 q_values_next_target = self.target_model.predict_q_values(self.sess, next_states)
                 targets = rewards + np.invert(terminals).astype(np.float32) \
                         * self.gamma * q_values_next_target[np.arange(self.batch_size), best_actions].reshape((-1, 1))
+                #print self.sess, states, targets.flatten(), actions
                 loss = self.q_model.update_step(self.sess, states, targets.flatten(), actions)
 
             if terminal or step == max_steps:

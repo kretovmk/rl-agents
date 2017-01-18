@@ -51,8 +51,10 @@ class QvalueEstimatorBase(object):
 
     def update_step(self, sess, states, targets, actions):
         feed_dict = {self.state_ph: states, self.target_ph: targets, self.actions_ph: actions}
-        summaries, global_step, loss, _ = sess.run([self.summaries, tf.contrib.framework.get_global_step(),
-                                                    self.loss, self.train_op], feed_dict=feed_dict)
+        summaries, global_step, loss, _ = sess.run([self.summaries, self.global_step,
+                                                   self.loss, self.train_op], feed_dict=feed_dict)
+        # summaries, loss, _ = sess.run([self.summaries,
+        #                                             self.loss, self.train_op], feed_dict=feed_dict)
         if self.summary_writer:
             self.summary_writer.add_summary(summaries, global_step)
         return loss
@@ -90,7 +92,8 @@ class QvalueEstimatorDense(QvalueEstimatorBase):
         super(QvalueEstimatorDense, self).__init__(*args, **kwargs)
 
     def _build_network(self):
-        fc1 = tf.contrib.layers.fully_connected(self.state_ph, 16)
+        flattened = tf.contrib.layers.flatten(self.state_ph)
+        fc1 = tf.contrib.layers.fully_connected(flattened, 16)
         #fc2 = tf.contrib.layers.fully_connected(fc1, 32)
         out = tf.contrib.layers.fully_connected(fc1, self.n_actions)
         return out
