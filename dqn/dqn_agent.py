@@ -6,8 +6,7 @@ import math
 
 from utils import copy_parameters
 
-logger = logging.getLogger(__name__)
-
+logger = logging.getLogger('__main__')
 
 # TODO: concatenation of screens / states. how?
 
@@ -127,7 +126,7 @@ class DQNAgent(object):
                 self._decrease_eps(total_t)
                 if total_t % self.upd_target_freq == 0:
                     copy_parameters(self.sess, self.q_model, self.target_model)
-                    logging.INFO('Training step: {}, weights of target network were updated.'.format(total_t))
+                    logging.info('Training step: {}, weights of target network were updated.'.format(total_t))
                 batch = self.replay_memory.get_random_batch(batch_size=self.batch_size)
                 states = batch['observations']
                 actions = batch['actions']

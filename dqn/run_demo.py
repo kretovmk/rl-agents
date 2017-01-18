@@ -4,6 +4,7 @@ import numpy as np
 import logging
 import gym
 import os
+import dqn_agent
 
 from q_estimator import QvalueEstimatorDense
 from dqn_agent import DQNAgent, RandomAgent
@@ -54,21 +55,14 @@ DUELLING = True
 OPT_TIGHT = True
 PRIORITIZED = True
 
-#logging
-if not os.path.exists(EXP_FOLDER):
-    os.makedirs(EXP_FOLDER)
-
-logger = logging.getLogger()
-handdler = logging.FileHandler(os.path.join(EXP_FOLDER, 'data.log'))
-formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-handdler.setFormatter(formatter)
-logger.addHandler(handdler)
-logger.setLevel(logging.INFO)
-
 assert CONCAT_STATES >= 1, 'CONCAT_STATES should be >= 1.'
 assert REPLAY_MEMORY_SIZE >= REPLAY_MEMORY_SIZE_INIT, 'Inconsistent size of replay memory and replay memory init.'
 
 if __name__ == '__main__':
+
+    #logging
+    logger = logging.getLogger(__name__)
+    logger.setLevel(level=logging.INFO)
 
     # creating env, approximators, memory and preprocessing
     env = gym.make(ENV_NAME)
@@ -122,10 +116,10 @@ if __name__ == '__main__':
 
         if USE_CHECKPOINT:
             if latest_checkpoint:
-                logger.info('Loading model checkpoint {} ..'.format(latest_checkpoint))
+                logging.info('Loading model checkpoint {} ..'.format(latest_checkpoint))
                 saver.restore(sess, latest_checkpoint)
             else:
-                logger.info('Could not load model checkpoint from {} ..'.format(latest_checkpoint))
+                logging.info('Could not load model checkpoint from {} ..'.format(latest_checkpoint))
 
         agent.fill_replay_memory(exploration_agent, steps=REPLAY_MEMORY_SIZE_INIT)
 
@@ -133,7 +127,7 @@ if __name__ == '__main__':
             saver.save(tf.get_default_session(), checkpoints_path)
             if n_episode % EVAL_FREQ == 0:
                 reward = agent.run_episode(test=True, max_steps=MAX_ENV_STEPS)
-                logger.info('Episode: {}, Reward: {}, Mode: Test'.format(n_episode, sum(reward)))
+                logging.info('Episode: {}, Reward: {}, Mode: Test'.format(n_episode, sum(reward)))
             else:
                 reward = agent.run_episode(test=False, max_steps=MAX_ENV_STEPS)
-                logger.info('Episode: {}, Reward: {}, Mode: Train'.format(n_episode, sum(reward)))
+                logging.info('Episode: {}, Reward: {}, Mode: Train'.format(n_episode, sum(reward)))
