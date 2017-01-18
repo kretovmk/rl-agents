@@ -1,11 +1,6 @@
 
 import tensorflow as tf
 
-from collections import namedtuple
-
-
-floatX = tf.float32
-EpisodeStats = namedtuple("Stats",["episode_lengths", "episode_rewards"])
 
 def make_list(data):
     if not hasattr(data, '__iter__'):
@@ -28,7 +23,6 @@ class AtariImgProcessor(object):
     """
     Processes raw Atari image. Resize and convert to grayscale.
     """
-
     def __init__(self,
                  img_shape=(210, 160,3),
                  bounding_box=(34, 0, 160, 160),

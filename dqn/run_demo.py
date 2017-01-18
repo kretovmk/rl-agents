@@ -55,9 +55,18 @@ OPT_TIGHT = True
 PRIORITIZED = True
 
 #logging
-logging.basicConfig(filename=os.path.join(EXP_FOLDER, 'data.log'), level=logging.INFO)
+if not os.path.exists(EXP_FOLDER):
+    os.makedirs(EXP_FOLDER)
+
+logger = logging.getLogger()
+handdler = logging.FileHandler(os.path.join(EXP_FOLDER, 'data.log'))
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+handdler.setFormatter(formatter)
+logger.addHandler(handdler)
+logger.setLevel(logging.INFO)
 
 assert CONCAT_STATES >= 1, 'CONCAT_STATES should be >= 1.'
+assert REPLAY_MEMORY_SIZE >= REPLAY_MEMORY_SIZE_INIT, 'Inconsistent size of replay memory and replay memory init.'
 
 if __name__ == '__main__':
 
@@ -113,18 +122,18 @@ if __name__ == '__main__':
 
         if USE_CHECKPOINT:
             if latest_checkpoint:
-                logging.INFO('Loading model checkpoint {} ..'.format(latest_checkpoint))
+                logger.info('Loading model checkpoint {} ..'.format(latest_checkpoint))
                 saver.restore(sess, latest_checkpoint)
             else:
-                logging.INFO('Could not load model checkpoint from {} ..'.format(latest_checkpoint))
+                logger.info('Could not load model checkpoint from {} ..'.format(latest_checkpoint))
 
-        agent.fill_replay_memory(exploration_agent)
+        agent.fill_replay_memory(exploration_agent, steps=REPLAY_MEMORY_SIZE_INIT)
 
         for n_episode in xrange(NUM_EPISODES):
             saver.save(tf.get_default_session(), checkpoints_path)
             if n_episode % EVAL_FREQ == 0:
                 reward = agent.run_episode(test=True, max_steps=MAX_ENV_STEPS)
-                logging.INFO('Episode: {}, Reward: {}, Mode: Test'.format(n_episode, sum(reward)))
+                logger.info('Episode: {}, Reward: {}, Mode: Test'.format(n_episode, sum(reward)))
             else:
                 reward = agent.run_episode(test=False, max_steps=MAX_ENV_STEPS)
-                logging.INFO('Episode: {}, Reward: {}, Mode: Train'.format(n_episode, sum(reward)))
+                logger.info('Episode: {}, Reward: {}, Mode: Train'.format(n_episode, sum(reward)))

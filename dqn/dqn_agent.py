@@ -1,13 +1,12 @@
 
 import tensorflow as tf
 import numpy as np
-import itertools
 import logging
 import math
-import os
 
-from memory import ReplayMemory
-from utils import EpisodeStats, copy_parameters
+from utils import copy_parameters
+
+logger = logging.getLogger(__name__)
 
 
 # TODO: concatenation of screens / states. how?
@@ -85,7 +84,7 @@ class DQNAgent(object):
         """
         Fill in replay memory for specified number of steps.
         """
-        logging.INFO('Populating replay memory..')
+        logger.info('Populating replay memory..')
         state = self.env.reset()
         state = self._process_and_stack(state)
         for i in xrange(steps):
