@@ -26,11 +26,11 @@ if __name__ == '__main__':
                         state_processor=state_processor,
                         num_episodes=10000,
                         experiments_folder=experiment_dir,
-                        replay_memory_size=10000,
+                        replay_memory_size=100000,
                         replay_memory_size_init=1000,
-                        upd_target_freq=400,
+                        upd_target_freq=1000,
                         gamma=0.9,
                         eps_start=1.0,
-                        eps_end=0.025,
-                        eps_decay_steps=1000,
-                        batch_size=32)
+                        eps_end=0.01,
+                        eps_decay_steps=5000,
+                        batch_size=64)

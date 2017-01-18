@@ -9,7 +9,12 @@ from memory import ReplayMemory
 from utils import floatX, EpisodeStats, copy_parameters
 from preprocessing import EmptyProcessor
 
-# TODO: 1. double dqn, 2. duelling 3. prioritized exp replay, 4. optimality tightening
+# TODO:
+# 1. double dqn -- https://arxiv.org/abs/1509.06461
+# 2. duelling -- https://arxiv.org/abs/1511.06581
+# 3. prioritized exp replay -- https://arxiv.org/abs/1511.05952
+# 4. optimality tightening -- https://arxiv.org/abs/1611.01606
+# 5. small options -- eps schedule, target network (full or incr update)
 # TODO: add testing period (evaluation)
 # TODO: amend that ReplayMemory is for discrete and cont, and Q-learn is only for discrete
 
