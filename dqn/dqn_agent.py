@@ -148,7 +148,7 @@ class DQNAgent(object):
                 loss = self.q_model.update_step(self.sess, states, targets.flatten(), actions)
 
             if terminal or step == max_steps:
-                if not test:
+                #if not test:
                     #print states
                     #print next_states
                 return total_reward
