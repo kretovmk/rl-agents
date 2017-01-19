@@ -1,18 +1,19 @@
-
-import tensorflow as tf
-import numpy as np
 import logging
-import gym
 import os
-import dqn_agent
 
-from q_estimator import QvalueEstimatorDense
+import gym
+import numpy as np
+import tensorflow as tf
+
 from dqn_agent import DQNAgent, RandomAgent
-from utils import EmptyProcessor
-from memory import ReplayMemory
+from approximators import QvalueEstimatorDense
+from utils.preprocessing import EmptyProcessor
+from utils.memory import ReplayMemory
 
 """
 Q-learning with function approximation.
+
+Based on code: https://github.com/dennybritz/reinforcement-learning/blob/master/DQN/dqn.py
 
 Following improvements to basic algorithm [https://webdocs.cs.ualberta.ca/~sutton/book/the-book-2nd.html]
 are implemented:
@@ -49,7 +50,7 @@ EPS_END = 0.01
 EPS_LAMBDA = 0.001
 BATCH_SIZE = 32
 
-# q-learning options
+# Q-learning options
 DOUBLE_DQN = True
 DUELLING = True
 OPT_TIGHT = True

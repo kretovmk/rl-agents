@@ -1,11 +1,11 @@
-
-import tensorflow as tf
 import itertools
-import numpy as np
 import logging
 import math
 
-from utils import copy_parameters
+import numpy as np
+import tensorflow as tf
+
+from utils.misc import copy_parameters
 
 logger = logging.getLogger('__main__')
 

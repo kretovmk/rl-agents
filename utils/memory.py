@@ -1,7 +1,7 @@
 
 import numpy as np
 
-# TODO: add n_steps, prioritized sampling
+# TODO: 1. test how n_steps work, 2. add prioritized sampling
 
 class ReplayMemory(object):
     """
