@@ -5,10 +5,11 @@ import gym
 import numpy as np
 import tensorflow as tf
 
-from dqn_agent import DQNAgent, RandomAgent
-from approximators import QvalueEstimatorDense
+from base.agents import RandomAgent
+from base.approximators import QvalueEstimatorDense
+from base.memory import ReplayMemory
+from dqn_agent import DQNAgent
 from utils.preprocessing import EmptyProcessor
-from utils.memory import ReplayMemory
 
 """
 Q-learning with function approximation.
