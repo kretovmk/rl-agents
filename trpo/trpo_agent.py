@@ -4,7 +4,7 @@ import numpy as np
 import logging
 import itertools
 
-from utils.math import cat_sample, line_search, discount_rewards
+from utils.math import cat_sample, line_search, discount_rewards, conjugate_gradient
 from utils.misc import var_shape, flat_gradients
 
 logger = logging.getLogger('__main__')
@@ -146,12 +146,12 @@ class TRPOAgent(object):
             state = next_state
 
             if t == self.max_steps or terminal:
-                traj = {'states': states,
+                path = {'states': states,
                         'actions': actions,
                         'rewards': rewards,
                         'action_probs': action_probs,
                         'actions_one_hot': actions_one_hot}
-                return traj
+                return path
 
 
     def train(self, batch_size=8, n_iter=100):
@@ -160,7 +160,8 @@ class TRPOAgent(object):
 
             paths = []
             for _ in xrange(batch_size):
-                paths.append(self.run_episode())
+                path = self.run_episode()
+                paths.append(path)
 
             for path in paths:
                 path['baseline'] = self.value.predict(path['states'])
@@ -168,6 +169,81 @@ class TRPOAgent(object):
                 path['advantages'] = [x - y for x, y in zip(path['returns'], path['baseline'])]
 
             # TODO: check validation of value losses, advantages normalization (tilar)
+
+
+            advant = np.concatenate([path['advantages'] for path in paths])
+            advant -= advant.mean()
+            advant /= (advant.std() + TOL)
+
+            actions = np.concatenate([path['actions_one_hot'] for path in paths])
+
+
+            # TODO: add option for with / without bootstrapping here
+            prev_policy = np.concatenate([path['action_probs'] for path in paths])
+            value_loss = self.value.fit(paths)
+            print i, value_loss
+
+
+            previous_parameters_flat = self.get_variables_flat_form()
+
+            feed_dict = {self.state_ph: np.concatenate([path['states'] for path in paths]),
+                         self.advantages: advant,
+                         self.cur_action_1h : actions,
+                         self.prev_policy: prev_policy}
+
+
+            def fisher_vector_product(multiplier):
+                feed_dict[self.flat_mult] = multiplier
+                conjugate_gradients_damping = 0.1
+                return self.sess.run(self.fisher_product_op_list, feed_dict) + conjugate_gradients_damping * multiplier
+
+
+            policy_gradients = self.sess.run(self.policy_gradients_op, feed_dict)
+
+            step_direction = conjugate_gradient(fisher_vector_product, -policy_gradients)
+
+
+            hessian_vector_product = step_direction.dot(fisher_vector_product(step_direction))
+            max_kl = 0.01
+
+
+            # This is our \beta.
+            max_step_length = np.sqrt(2 * max_kl / hessian_vector_product)
+            max_step = max_step_length * step_direction
+
+
+            def get_loss_for(weights_flat):
+                self.set_variables_from_flat_form(weights_flat)
+                loss = self.sess.run(self.loss, feed_dict)
+                kl_divergence = self.sess.run(self.kl_div, feed_dict)
+                if kl_divergence > max_kl:
+                    logger.info("Hit the safeguard: %s", kl_divergence)
+                    return float('inf')
+                else:
+                    return loss
+
+
+            # search along the search direction.
+            new_weights = line_search(get_loss_for, previous_parameters_flat, max_step)
+
+            self.set_variables_from_flat_form(new_weights)
+
+            mean_path_len = np.mean([len(path['rewards']) for path in paths])
+            print 'mean path len: {}'.format(mean_path_len)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

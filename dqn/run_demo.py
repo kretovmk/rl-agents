@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 
 from base.agents import RandomAgent
-from base.approximators import QvalueEstimatorDense
+from approximators import QvalueEstimatorDense
 from base.memory import ReplayMemory
 from dqn_agent import DQNAgent
 from utils.preprocessing import EmptyProcessor

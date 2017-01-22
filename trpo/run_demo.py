@@ -1,7 +1,13 @@
-import logging
-import os
 
 import tensorflow as tf
+import logging
+import gym
+import os
+
+from trpo_agent import TRPOAgent
+from approximators import PolicyDense, ValueDense
+from utils.preprocessing import EmptyProcessor
+
 
 """
 TRPO with function approximation.
@@ -46,3 +52,27 @@ if __name__ == '__main__':
     #logging
     logger = logging.getLogger(__name__)
     logger.setLevel(level=logging.INFO)
+
+    env = gym.make(ENV_NAME)
+
+    policy_model = PolicyDense(inp_shape=ENV_STATE_SHAPE,
+                               n_actions=N_ACTIONS)
+
+    value_model = ValueDense(inp_shape=ENV_STATE_SHAPE)
+
+    state_processor = EmptyProcessor()
+
+    # launching calculation
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+
+        agent = TRPOAgent(sess=sess,
+                          env=env,
+                          state_shape=ENV_STATE_SHAPE,
+                          policy=policy_model,
+                          value=value_model,
+                          state_processor=state_processor,
+                          gamma=GAMMA,
+                          max_steps=200
+                          )
+        agent.train()

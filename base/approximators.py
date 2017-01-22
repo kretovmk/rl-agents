@@ -132,6 +132,8 @@ class ValueEstimatorBase(object):
     def predict(self, sess, states):
         return sess.run(self.value, feed_dict={self.state_ph: states})
 
+    # TODO: delete either update_step or fit
+
     def update_step(self, sess, states, targets):
         feed_dict = {self.state_ph: states, self.target_ph: targets}
         summaries, global_step, loss, _ = sess.run([self.summaries, self.global_step,
@@ -139,6 +141,13 @@ class ValueEstimatorBase(object):
         if self.summary_writer:
             self.summary_writer.add_summary(summaries, global_step)
         return global_step, loss
+
+
+    def fit(self, sess, states, targets):
+        feed_dict = {self.state_ph: states, self.target_ph: targets}
+        loss, _ = sess.run([self.loss, self.train_op], feed_dict=feed_dict)
+        return loss
+
 
     def _build_network(self):
         raise NotImplementedError
