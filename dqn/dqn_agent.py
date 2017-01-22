@@ -9,7 +9,7 @@ from utils.misc import copy_parameters
 
 logger = logging.getLogger('__main__')
 
-# TODO: concatenation of screens / states. how?
+# TODO: concatenation of screens / states. -- fixed! check with RNN
 
 
 

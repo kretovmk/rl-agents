@@ -1,5 +1,6 @@
 
 import tensorflow as tf
+import numpy as np
 import csv
 
 
@@ -19,6 +20,18 @@ def copy_parameters(sess, model_1, model_2):
         op = p2.assign(p1)
         update_ops.append(op)
     sess.run(update_ops)
+
+
+def var_shape(x):
+    out = [k.value for k in x.get_shape()]
+    assert all(isinstance(a, int) for a in out), 'Shape function assumes that shape is fully known.'
+    return out
+
+
+def flat_gradients(loss, var_list):
+  grads = tf.gradients(loss, var_list)
+  return tf.concat(0, [tf.reshape(grad, [np.prod(var_shape(v))])
+                       for (v, grad) in zip(var_list, grads)])
 
 
 def write_csv(file_name, *arrays):
