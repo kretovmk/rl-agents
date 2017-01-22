@@ -129,7 +129,7 @@ class ValueEstimatorBase(object):
             tf.summary.scalar('v_value', tf.reduce_max(self.value))
         ])
 
-    def predict_q_values(self, sess, states):
+    def predict(self, sess, states):
         return sess.run(self.value, feed_dict={self.state_ph: states})
 
     def update_step(self, sess, states, targets):

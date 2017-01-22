@@ -71,7 +71,7 @@ class DQNAgent(object):
         self.eps = self.eps_end + (self.eps_start - self.eps_end) * math.exp(-self.eps_lambda * t)
 
     def _train_step(self):
-        pass
+        pass   # TODO: bring here part of code from run_episode
 
     def fill_replay_memory(self, exploration_agent, steps):
         """

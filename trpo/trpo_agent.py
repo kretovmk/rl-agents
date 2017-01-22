@@ -2,6 +2,7 @@
 import tensorflow as tf
 import numpy as np
 import logging
+import itertools
 
 from utils.math import cat_sample, line_search, discount_rewards
 from utils.misc import var_shape, flat_gradients
@@ -14,6 +15,7 @@ logger = logging.getLogger('__main__')
 # TODO: check discount reward time -- self.made realization and through scipy signal
 
 DTYPE = tf.float32
+TOL = 1e-8
 
 
 class TRPOAgent(object):
@@ -26,7 +28,8 @@ class TRPOAgent(object):
                        policy,
                        value,
                        state_processor,
-                       gamma=0.99
+                       gamma=0.99,
+                       max_steps=200
                  ):
         self.sess = sess
         self.env = env
@@ -35,6 +38,7 @@ class TRPOAgent(object):
         self.value = value
         self.state_processor = state_processor
         self.gamma = gamma
+        self.max_steps = max_steps
 
         self.state_ph = tf.placeholder(shape=(None,) + self.state_shape, dtype=DTYPE, name='states')
 
@@ -62,7 +66,132 @@ class TRPOAgent(object):
         def get_variables_flat_form():
           op = tf.concat(
               0, [tf.reshape(v, [np.prod(var_shape(v))]) for v in var_list])
-          return op.eval(session=self.session)
+          return op.eval(session=self.sess)
         self.get_variables_flat_form = get_variables_flat_form
+
+        # define a function to set all trainable variables from a flat tensor theta.
+        def create_set_variables_from_flat_form_function():
+            shapes = map(var_shape, var_list)
+            total_size = sum(np.prod(shape) for shape in shapes)
+            theta_in = tf.placeholder(DTYPE, [total_size])
+            start = 0
+            assigns = []
+            for (shape, v) in zip(shapes, var_list):
+                size = np.prod(shape)
+                assigns.append(tf.assign(v, tf.reshape(theta_in[start:start + size], shape)))
+                start += size
+            op = tf.group(*assigns)
+
+            def set_variables_from_flat_form(theta):
+                return self.sess.run(op, feed_dict={theta_in: theta})
+
+            return set_variables_from_flat_form
+
+        self.set_variables_from_flat_form = create_set_variables_from_flat_form_function()
+
+        self.policy_gradients_op = flat_gradients(self.loss, var_list)
+
+        # TODO: check why do we need stop gradient for prev_policy here
+        # TODO: check if this expression can only been used for on-policy, otherwise re-do.........
+        # TODO: this is an average of woj and tilar code...
+        self.kl_div = tf.reduce_sum(tf.stop_gradient(self.policy) *
+                                    tf.log(tf.div(tf.stop_gradient(self.policy) + TOL,
+                                                  self.policy + TOL))) / tf.cast(tf.shape(self.state_ph)[0], DTYPE)
+
+        kl_div_grad_op = tf.gradients(self.kl_div, var_list)
+
+        self.flat_mult = tf.placeholder(DTYPE, shape=[None])
+
+
+        # Do the actual multiplication. Some shape shifting magic.
+        start = 0
+        multiplier_parts = []
+        for var in var_list:
+          shape = var_shape(var)
+          size = np.prod(shape)
+          part = tf.reshape(self.flat_mult[start:(start + size)], shape)
+          multiplier_parts.append(part)
+          start += size
+
+        product_op_list = [tf.reduce_sum(kl_derivation * multiplier) for
+                           (kl_derivation, multiplier) in zip(kl_div_grad_op, multiplier_parts)]
+
+        # Second derivation
+        self.fisher_product_op_list = flat_gradients(product_op_list, var_list)
+
+
+    def run_episode(self):
+
+        action_1h = np.zeros(self.env.action_space.n)
+        states, actions, rewards, action_probs, actions_one_hot = [], [], [], [], []
+
+        state = self.env.reset()
+
+        for t in itertools.count():
+
+
+            action_probs = self.sess.run(self.policy, feed_dict={self.state_ph: np.expand_dims(state, 0)})
+            action = int(cat_sample(action_probs)[0])
+            action_1h = 0
+            action_1h[action] = 1
+
+            states.append(state)
+            actions.append(action)
+            action_probs.append(action_probs)
+            actions_one_hot.append(action_1h)
+
+            next_state, reward, terminal, _ = self.env.step(action)
+
+            rewards.append(reward)
+            state = next_state
+
+            if t == self.max_steps or terminal:
+                traj = {'states': states,
+                        'actions': actions,
+                        'rewards': rewards,
+                        'action_probs': action_probs,
+                        'actions_one_hot': actions_one_hot}
+                return traj
+
+
+    def train(self, batch_size=8, n_iter=100):
+
+        for i in xrange(n_iter):
+
+            paths = []
+            for _ in xrange(batch_size):
+                paths.append(self.run_episode())
+
+            for path in paths:
+                path['baseline'] = self.value.predict(path['states'])
+                path['returns'] = discount_rewards(path['rewards'], self.gamma)
+                path['advantages'] = [x - y for x, y in zip(path['returns'], path['baseline'])]
+
+            # TODO: check validation of value losses, advantages normalization (tilar)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
