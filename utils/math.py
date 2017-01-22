@@ -65,7 +65,7 @@ def line_search(f, x, max_step):
 
 def conjugate_gradient(f_Ax, b, cg_iters=10, residual_tol=1e-10):
     """
-    Math craziness. Implements a conjugate gradient algorithm. In short, solves
+    Implements a conjugate gradient algorithm. In short, solves
     Ax = b for x having only a function x -> Ax (f_Ax) and b.
     """
     p = b.copy()
