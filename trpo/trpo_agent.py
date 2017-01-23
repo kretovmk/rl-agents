@@ -14,6 +14,8 @@ logger = logging.getLogger('__main__')
 # TODO: check line search. looks not optimal...?
 # TODO: check discount reward time -- self.made realization and through scipy signal
 
+# TODO: decrease line search steps from 1000 after debugging
+
 DTYPE = tf.float32
 TOL = 1e-8
 
@@ -54,13 +56,13 @@ class TRPOAgent(object):
         self.loss = -1. * tf.reduce_mean(
             tf.reduce_sum(
                 tf.multiply(
-                    self.cur_action_1h * tf.div(self.policy, self.prev_policy)), 1) * self.advantages)
+                    self.cur_action_1h, tf.div(self.policy.prob_actions, self.prev_policy)), 1) * self.advantages)
 
         self.train_op = tf.train.AdamOptimizer().minimize(self.loss)
 
         # Calculating policy step !!!
 
-        var_list = tf.trainable_variables()
+        var_list = [var for var in tf.trainable_variables() if self.policy.scope in var.name]
 
         # TODO: check how this works without eval
         def get_variables_flat_form():
@@ -89,14 +91,16 @@ class TRPOAgent(object):
 
         self.set_variables_from_flat_form = create_set_variables_from_flat_form_function()
 
+        #print tf.gradients(self.loss, var_list)
+        #print [var.name for var in var_list]
         self.policy_gradients_op = flat_gradients(self.loss, var_list)
 
         # TODO: check why do we need stop gradient for prev_policy here
         # TODO: check if this expression can only been used for on-policy, otherwise re-do.........
         # TODO: this is an average of woj and tilar code...
-        self.kl_div = tf.reduce_sum(tf.stop_gradient(self.policy) *
-                                    tf.log(tf.div(tf.stop_gradient(self.policy) + TOL,
-                                                  self.policy + TOL))) / tf.cast(tf.shape(self.state_ph)[0], DTYPE)
+        self.kl_div = tf.reduce_sum(tf.stop_gradient(self.policy.prob_actions) *
+                                    tf.log(tf.div(tf.stop_gradient(self.policy.prob_actions) + TOL,
+                                                  self.policy.prob_actions + TOL))) / tf.cast(tf.shape(self.state_ph)[0], DTYPE)
 
         kl_div_grad_op = tf.gradients(self.kl_div, var_list)
 
@@ -129,15 +133,14 @@ class TRPOAgent(object):
 
         for t in itertools.count():
 
-
-            action_probs = self.sess.run(self.policy, feed_dict={self.state_ph: np.expand_dims(state, 0)})
-            action = int(cat_sample(action_probs)[0])
-            action_1h = 0
+            action_prob = self.sess.run(self.policy.prob_actions, feed_dict={self.policy.state_ph: np.expand_dims(state, 0)})
+            action = int(cat_sample(action_prob)[0])
+            action_1h *= 0.
             action_1h[action] = 1
 
             states.append(state)
             actions.append(action)
-            action_probs.append(action_probs)
+            action_probs.append(action_prob)
             actions_one_hot.append(action_1h)
 
             next_state, reward, terminal, _ = self.env.step(action)
@@ -146,15 +149,15 @@ class TRPOAgent(object):
             state = next_state
 
             if t == self.max_steps or terminal:
-                path = {'states': states,
-                        'actions': actions,
-                        'rewards': rewards,
-                        'action_probs': action_probs,
-                        'actions_one_hot': actions_one_hot}
+                path = {'states': np.concatenate(np.expand_dims(states, 0)),
+                        'actions': np.array(actions),
+                        'rewards': np.array(rewards),
+                        'action_probs': np.concatenate(action_probs),
+                        'actions_one_hot': np.concatenate(np.expand_dims(actions_one_hot, 0))}
                 return path
 
 
-    def train(self, batch_size=8, n_iter=100):
+    def train(self, batch_size=8, n_iter=1000):
 
         for i in xrange(n_iter):
 
@@ -164,9 +167,15 @@ class TRPOAgent(object):
                 paths.append(path)
 
             for path in paths:
-                path['baseline'] = self.value.predict(path['states'])
+                path['baseline'] = self.value.predict(self.sess, path['states']).reshape((-1))
+                #print path['actions_one_hot']
+                #print path['action_probs'].shape, path['actions_one_hot'].shape
                 path['returns'] = discount_rewards(path['rewards'], self.gamma)
-                path['advantages'] = [x - y for x, y in zip(path['returns'], path['baseline'])]
+                path['advantages'] = path['returns'] - path['baseline']
+
+            print path['baseline'].mean(), path['baseline'].shape
+            #print path['advantages'].shape
+            #print path['returns'].shape, path['baseline'].shape
 
             # TODO: check validation of value losses, advantages normalization (tilar)
 
@@ -180,13 +189,15 @@ class TRPOAgent(object):
 
             # TODO: add option for with / without bootstrapping here
             prev_policy = np.concatenate([path['action_probs'] for path in paths])
-            value_loss = self.value.fit(paths)
-            print i, value_loss
+            for path in paths:
+                value_loss = self.value.fit(self.sess, path['states'], path['returns'])
+                #print i, value_loss
 
 
             previous_parameters_flat = self.get_variables_flat_form()
 
-            feed_dict = {self.state_ph: np.concatenate([path['states'] for path in paths]),
+            feed_dict = {self.policy.state_ph: np.concatenate([path['states'] for path in paths]),
+                         self.state_ph: np.concatenate([path['states'] for path in paths]),
                          self.advantages: advant,
                          self.cur_action_1h : actions,
                          self.prev_policy: prev_policy}
@@ -197,7 +208,7 @@ class TRPOAgent(object):
                 conjugate_gradients_damping = 0.1
                 return self.sess.run(self.fisher_product_op_list, feed_dict) + conjugate_gradients_damping * multiplier
 
-
+            #print path['advantages'].shape
             policy_gradients = self.sess.run(self.policy_gradients_op, feed_dict)
 
             step_direction = conjugate_gradient(fisher_vector_product, -policy_gradients)

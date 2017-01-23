@@ -4,8 +4,8 @@ import logging
 import gym
 import os
 
-from trpo_agent import TRPOAgent
-from approximators import PolicyDense, ValueDense
+from trpo.trpo_agent import TRPOAgent
+from trpo.approximators import PolicyDense, ValueDense
 from utils.preprocessing import EmptyProcessor
 
 

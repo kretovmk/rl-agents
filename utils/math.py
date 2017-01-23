@@ -46,7 +46,7 @@ def line_search(f, x, max_step):
     an improvement in f. Start with a max step and shrink it exponentially until
     there is an improvement.
     """
-    max_shrinks = 100
+    max_shrinks = 1000
     shrink_multiplier = 0.9
     fval = f(x)
     step_frac = 1.0

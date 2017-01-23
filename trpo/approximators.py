@@ -12,6 +12,7 @@ class PolicyDense(PolicyBase):
     def _build_network(self):
         out = tf.contrib.layers.flatten(self.state_ph)
         out = tf.contrib.layers.fully_connected(out, 16)
+        out = tf.contrib.layers.fully_connected(out, self.n_actions)
         out = tf.nn.softmax(out)
         return out
 
