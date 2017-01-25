@@ -1,7 +1,10 @@
 
+import gym
+
 from sandbox.rocky.tf.algos.trpo import TRPO
 from rllab.baselines.linear_feature_baseline import LinearFeatureBaseline
 from rllab.baselines.zero_baseline import ZeroBaseline
+from envs import GymEnvFrameProcessed, TfEnvFrameProcessed
 from rllab.envs.gym_env import GymEnv
 from rllab.envs.normalized_env import normalize
 from sandbox.rocky.tf.optimizers.conjugate_gradient_optimizer import ConjugateGradientOptimizer
@@ -12,11 +15,11 @@ from rllab.misc.instrument import stub, run_experiment_lite
 
 
 #stub(globals())
+ENV_NAME = 'Pong-v0'
 
-#env = TfEnv(normalize(CartpoleEnv()))
-#env = TfEnv(CartpoleEnv())
-env = TfEnv(GymEnv('Skiing-v0'))
-#env = gym.make('CartPole-v0')
+#rllab_env = GymEnv(ENV_NAME)
+#env = TfEnv(AtariProcessedImage(env=rllab_env))
+env = TfEnvFrameProcessed(GymEnvFrameProcessed(ENV_NAME))
 
 
 policy = CategoricalMLPPolicy(
