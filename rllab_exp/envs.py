@@ -26,11 +26,11 @@ class GymEnvFrameProcessed(GymEnv):
         super(GymEnvFrameProcessed, self).__init__(env_name)
         self.observation_space = spaces.Box(low=0., high=1., shape=NEW_SHAPE)
 
-    @property
+    @GymEnv.observation_space.getter
     def observation_space(self):
         return self._observation_space
 
-    @observation_space.setter
+    @GymEnv.observation_space.setter
     def observation_space(self, value):
         self._observation_space = value
 

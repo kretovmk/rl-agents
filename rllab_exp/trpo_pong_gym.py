@@ -1,6 +1,8 @@
 
 import gym
+import tensorflow as tf
 
+import sandbox.rocky.tf.core.layers as L
 from sandbox.rocky.tf.algos.trpo import TRPO
 from rllab.baselines.linear_feature_baseline import LinearFeatureBaseline
 from rllab.baselines.zero_baseline import ZeroBaseline
@@ -11,22 +13,24 @@ from sandbox.rocky.tf.optimizers.conjugate_gradient_optimizer import ConjugateGr
 from sandbox.rocky.tf.optimizers.conjugate_gradient_optimizer import FiniteDifferenceHvp
 from sandbox.rocky.tf.policies.categorical_mlp_policy import CategoricalMLPPolicy
 from sandbox.rocky.tf.envs.base import TfEnv
+from sandbox.rocky.tf.core.network import ConvNetwork
 from rllab.misc.instrument import stub, run_experiment_lite
 
 
 #stub(globals())
 ENV_NAME = 'Pong-v0'
 
-#rllab_env = GymEnv(ENV_NAME)
-#env = TfEnv(AtariProcessedImage(env=rllab_env))
-env = TfEnvFrameProcessed(GymEnvFrameProcessed(ENV_NAME))
+#env = TfEnv(GymEnv(ENV_NAME))
+#env = TfEnvFrameProcessed(GymEnvFrameProcessed(ENV_NAME))
 
+conv = ConvNetwork(name='CNN', input_shape=(210, 160, 3), output_dim=6,
+                 conv_filters=(16,), conv_filter_sizes=(1,), conv_strides=(4,), conv_pads=('SAME', 'SAME'),
+                 hidden_sizes=(256,), hidden_nonlinearity=tf.nn.relu, output_nonlinearity=tf.nn.relu)
 
 policy = CategoricalMLPPolicy(
     name="policy",
     env_spec=env.spec,
-    # The neural network policy should have two hidden layers, each with 32 hidden units.
-    hidden_sizes=(32, 32)
+    prob_network=conv,
 )
 
 #baseline = LinearFeatureBaseline(env_spec=env.spec)
