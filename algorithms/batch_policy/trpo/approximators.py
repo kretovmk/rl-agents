@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from algorithms.batch_policy import PolicyBase, ValueEstimatorBase
+from base.batch_policy import PolicyBase, ValueEstimatorBase
 
 
 class PolicyDense(PolicyBase):

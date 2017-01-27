@@ -7,8 +7,8 @@ import tensorflow as tf
 from batch_policy_opt.memory import ReplayMemory
 from dqn.approximators import QvalueEstimatorDense
 
-from algorithms.batch_policy.agents import RandomAgent
-from algorithms.q_learning.dqn_agent import DQNAgent
+from base.batch_policy.agents import RandomAgent
+from base.q_learning.dqn_agent import DQNAgent
 from utils.preprocessing import EmptyProcessor
 
 """

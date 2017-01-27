@@ -4,7 +4,7 @@ import os
 import gym
 import tensorflow as tf
 
-from algorithms.batch_policy.vpg_agent import VPGDense
+from base.batch_policy.vpg import VPGDense
 
 # general options
 USE_CHECKPOINT = False    # loading from saved checkpoint if possible

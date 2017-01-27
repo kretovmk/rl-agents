@@ -6,7 +6,7 @@ import gym
 import tensorflow as tf
 from trpo.approximators import PolicyDense, ValueDense
 
-from algorithms.batch_policy.trpo.trpo_agent import TRPOAgent
+from base.batch_policy.trpo.trpo_agent import TRPOAgent
 from utils.preprocessing import EmptyProcessor
 
 """

@@ -4,8 +4,8 @@ import itertools
 import logging
 import numpy as np
 
-from algorithms.batch_policy.algorithms import BatchPolicyBase
-from keras.layers import Input, Dense, Flatten
+from algorithms.batch_policy.base import BatchPolicyBase
+from keras.layers import Input, Dense
 from keras.models import Model
 from utils.math import discount_rewards
 
@@ -28,7 +28,9 @@ class VanillaPolicyGradient(BatchPolicyBase):
     1. Discrete action space
     2. Episodic tasks (but may work with non-episodic, like CartPole ).
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, state_shape, n_actions, *args, **kwargs):
+        self.state_shape = state_shape
+        self.n_action = n_actions
         super(VanillaPolicyGradient, self).__init__(*args, **kwargs)
 
     def _init_variables(self):
@@ -36,8 +38,6 @@ class VanillaPolicyGradient(BatchPolicyBase):
         self.actions_ph = tf.placeholder(shape=(None,), dtype=tf.int32, name='actions')
         self.advantages_ph = tf.placeholder(shape=(None,), dtype=tf.float32, name='advantages')
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
-
-
 
         self.action_probs = self._build_policy_network()
         self.value = self._build_value_network()
