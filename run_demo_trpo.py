@@ -43,9 +43,6 @@ BATCH_SIZE = 32
 # TRPO options
 
 
-
-
-
 if __name__ == '__main__':
     tf.reset_default_graph()
 

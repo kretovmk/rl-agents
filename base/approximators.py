@@ -1,5 +1,6 @@
 
 import tensorflow as tf
+import numpy as np
 import os
 
 # TODO: add testing period (evaluation)
@@ -30,9 +31,9 @@ class QvalueEstimatorBase(object):
     def _build_model(self):
         self.state_ph = tf.placeholder(shape=(None,) + self.inp_shape, dtype=tf.float32, name='x')
         self.target_ph = tf.placeholder(shape=(None,), dtype=tf.float32, name='y')
-        self.actions_ph = tf.placeholder(shape=(None, 1), dtype=tf.int32, name='actions')
+        self.action_ph = tf.placeholder(shape=(None, 1), dtype=tf.int32, name='actions')
         self.q_all = self._build_network()
-        self.actions_one_hot = tf.one_hot(tf.squeeze(self.actions_ph, axis=1), self.n_actions, dtype=tf.float32)
+        self.actions_one_hot = tf.one_hot(tf.squeeze(self.action_ph, axis=1), self.n_actions, dtype=tf.float32)
         self.q = tf.reduce_sum(tf.mul(self.actions_one_hot, self.q_all), reduction_indices=[1])
         self.losses = tf.squared_difference(self.q, self.target_ph)
         self.loss = tf.reduce_mean(self.losses)
@@ -50,7 +51,7 @@ class QvalueEstimatorBase(object):
         return sess.run(self.q_all, feed_dict={self.state_ph: states})
 
     def update_step(self, sess, states, targets, actions):
-        feed_dict = {self.state_ph: states, self.target_ph: targets, self.actions_ph: actions}
+        feed_dict = {self.state_ph: states, self.target_ph: targets, self.action_ph: actions}
         summaries, global_step, loss, _ = sess.run([self.summaries, self.global_step,
                                                    self.loss, self.train_op], feed_dict=feed_dict)
         if self.summary_writer:
@@ -86,11 +87,15 @@ class PolicyBase(object):
     def _build_model(self):
         self.state_ph = tf.placeholder(shape=(None,) + self.inp_shape, dtype=tf.float32, name='x')
         self.target_ph = tf.placeholder(shape=(None,), dtype=tf.float32, name='y')
-        self.actions_ph = tf.placeholder(shape=(None, 1), dtype=tf.int32, name='actions')
+        self.action_ph = tf.placeholder(shape=(None, 1), dtype=tf.int32, name='actions')
         self.prob_actions = self._build_network()
 
     def predict(self, sess, states):
         return sess.run(self.prob_actions, feed_dict={self.state_ph: states})
+
+    def choose_action(self, sess, state):
+        prob_actions = self.predict(sess, [state])
+        return np.argmax(prob_actions)
 
     def _build_network(self):
         raise NotImplementedError
@@ -142,12 +147,10 @@ class ValueEstimatorBase(object):
             self.summary_writer.add_summary(summaries, global_step)
         return global_step, loss
 
-
     def fit(self, sess, states, targets):
         feed_dict = {self.state_ph: states, self.target_ph: targets}
         loss, _ = sess.run([self.loss, self.train_op], feed_dict=feed_dict)
         return loss
-
 
     def _build_network(self):
         raise NotImplementedError
