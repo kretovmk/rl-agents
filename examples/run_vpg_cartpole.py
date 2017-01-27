@@ -1,23 +1,10 @@
-
-import tensorflow as tf
-import numpy as np
 import logging
-import gym
 import os
 
-from vpg.vpg_agent import VPGDense
+import gym
+import tensorflow as tf
 
-"""
-Vanilla Policy Gradient with function approximation and baseline.
-
-Refs:
-    1. http://rllab.readthedocs.io/en/latest/user/implement_algo_basic.html
-    2. http://www.scholarpedia.org/article/Policy_gradient_methods
-
-Limitations:
-1. Discrete action space
-2. Episodic tasks
-"""
+from algorithms.batch_policy.vpg_agent import VPGDense
 
 # general options
 USE_CHECKPOINT = False    # loading from saved checkpoint if possible

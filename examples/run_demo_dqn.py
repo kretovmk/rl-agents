@@ -1,14 +1,14 @@
-
 import logging
 import os
+
 import gym
 import numpy as np
 import tensorflow as tf
-
-from base.agents import RandomAgent
+from batch_policy_opt.memory import ReplayMemory
 from dqn.approximators import QvalueEstimatorDense
-from base.memory import ReplayMemory
-from dqn.dqn_agent import DQNAgent
+
+from algorithms.batch_policy.agents import RandomAgent
+from algorithms.q_learning.dqn_agent import DQNAgent
 from utils.preprocessing import EmptyProcessor
 
 """

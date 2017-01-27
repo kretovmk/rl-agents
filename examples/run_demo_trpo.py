@@ -1,13 +1,13 @@
 
-import tensorflow as tf
 import logging
-import gym
 import os
 
-from trpo.trpo_agent import TRPOAgent
+import gym
+import tensorflow as tf
 from trpo.approximators import PolicyDense, ValueDense
-from utils.preprocessing import EmptyProcessor
 
+from algorithms.batch_policy.trpo.trpo_agent import TRPOAgent
+from utils.preprocessing import EmptyProcessor
 
 """
 TRPO with function approximation.

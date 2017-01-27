@@ -1,7 +1,6 @@
-
 import tensorflow as tf
 
-from base.approximators import QvalueEstimatorBase
+from algorithms.batch_policy import QvalueEstimatorBase
 
 class QvalueEstimatorConv(QvalueEstimatorBase):
     """

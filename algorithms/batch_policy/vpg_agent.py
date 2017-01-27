@@ -4,6 +4,7 @@ import itertools
 import logging
 import numpy as np
 
+from algorithms.batch_policy.algorithms import BatchPolicyBase
 from keras.layers import Input, Dense, Flatten
 from keras.models import Model
 from utils.math import discount_rewards
@@ -15,34 +16,28 @@ from utils.math import discount_rewards
 logger = logging.getLogger('__main__')
 
 
-class VPGBase(object):
+class VanillaPolicyGradient(BatchPolicyBase):
+    """
+    Vanilla Policy Gradient with function approximation and baseline. No bootstrapping used.
 
-    def __init__(self, sess,
-                       env,
-                       state_shape,
-                       n_actions,
-                       state_processor,
-                       adv=True,
-                       lr=0.001,
-                       clip_gradients=10.,
-                       gamma=0.99,
-                       max_steps=200):
-        self.sess = sess
-        self.env = env
-        self.state_shape = state_shape
-        self.n_actions = n_actions
-        self.state_processor = state_processor
-        self.gamma = gamma
-        self.max_steps = max_steps
-        self.adv = adv
-        self.lr = lr
-        self.clip_gradients = clip_gradients
+    Refs:
+        1. http://rllab.readthedocs.io/en/latest/user/implement_algo_basic.html
+        2. http://www.scholarpedia.org/article/Policy_gradient_methods
 
-        self.states_ph = tf.placeholder(shape=(None,) + self.state_shape, dtype=tf.float32)
-        self.actions_ph = tf.placeholder(shape=(None,), dtype=tf.int32)
-        self.returns_ph = tf.placeholder(shape=(None,), dtype=tf.float32)
-        self.value_targets_ph = tf.placeholder(shape=(None,), dtype=tf.float32)
+    Limitations:
+    1. Discrete action space
+    2. Episodic tasks (but may work with non-episodic, like CartPole ).
+    """
+    def __init__(self, *args, **kwargs):
+        super(VanillaPolicyGradient, self).__init__(*args, **kwargs)
+
+    def _init_variables(self):
+        self.states_ph = tf.placeholder(shape=(None,) + self.state_shape, dtype=tf.float32, name='states')
+        self.actions_ph = tf.placeholder(shape=(None,), dtype=tf.int32, name='actions')
+        self.advantages_ph = tf.placeholder(shape=(None,), dtype=tf.float32, name='advantages')
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
+
+
 
         self.action_probs = self._build_policy_network()
         self.value = self._build_value_network()
