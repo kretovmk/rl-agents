@@ -34,7 +34,7 @@ BATCH_SIZE = 1000
 EVAL_FREQ = 1   # evaluate every N env steps
 RECORD_VIDEO_FREQ = 1000
 GAMMA = 0.9
-ADV = False
+ADV = True
 
 
 if __name__ == '__main__':
@@ -61,7 +61,7 @@ if __name__ == '__main__':
             states, actions, returns, av_reward = agent.run_batch_episodes(BATCH_SIZE)
             value_loss = 0.
             if ADV:
-                for _ in xrange(10):
+                for _ in xrange(100):
                     value_loss = agent.train_batch_value(sess, states, returns)
             policy_loss, step = agent.train_batch_policy(sess, states, actions, returns)
             if i % EVAL_FREQ == 0:

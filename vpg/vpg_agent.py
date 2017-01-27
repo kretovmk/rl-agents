@@ -1,13 +1,18 @@
 
 import tensorflow as tf
 import itertools
+import logging
 import numpy as np
 
+from keras.layers import Input, Dense, Flatten
+from keras.models import Model
 from utils.math import discount_rewards
 
 # TODO: check how cutting off trajectories spoil final result (it causes incorrect returns in the end)
 # TODO: check how baseling should be fitted -- now hardcoded 100 epochs
 # TODO: add tf summary
+
+logger = logging.getLogger('__main__')
 
 
 class VPGBase(object):
@@ -150,20 +155,21 @@ class VPGDense(VPGBase):
         super(VPGDense, self).__init__(*args, **kwargs)
 
     def _build_policy_network(self):
-        with tf.variable_scope('policy'):
-            out = tf.contrib.layers.flatten(self.states_ph)
-            for n_hid in self.hidden:
-                out = tf.contrib.layers.fully_connected(out, n_hid)
-                out = tf.nn.relu(out)
-            out = tf.contrib.layers.fully_connected(out, self.n_actions)
-            out = tf.nn.softmax(out)
-        return out
+        inputs = Input(shape=self.state_shape, name='policy_input')
+        out = inputs
+        for i, n_hid in enumerate(self.hidden):
+            out = Dense(output_dim=n_hid, activation='relu', name='dense_policy_{}'.format(i))(out)
+        out = Dense(output_dim=self.n_actions, activation='softmax', name='policy_softmax')(out)
+        model = Model(input=inputs, output=out)
+        policy = model(self.states_ph)
+        return policy
 
     def _build_value_network(self):
-        with tf.variable_scope('value'):
-            out = tf.contrib.layers.flatten(self.states_ph)
-            for n_hid in self.hidden:
-                out = tf.contrib.layers.fully_connected(out, n_hid)
-                out = tf.nn.tanh(out)
-            out = tf.contrib.layers.fully_connected(out, 1)
-        return tf.squeeze(out)
+        inputs = Input(shape=self.state_shape, name='value_input')
+        out = inputs
+        for i, n_hid in enumerate(self.hidden):
+            out = Dense(output_dim=n_hid, activation='relu', name='dense_value_{}'.format(i))(out)
+        out = Dense(output_dim=1, name='value_out')(out)
+        model = Model(input=inputs, output=out)
+        value = model(self.states_ph)
+        return tf.squeeze(value)
