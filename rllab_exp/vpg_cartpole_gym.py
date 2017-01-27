@@ -1,5 +1,6 @@
 
 from sandbox.rocky.tf.algos.trpo import TRPO
+from sandbox.rocky.tf.algos.vpg import VPG
 from rllab.baselines.linear_feature_baseline import LinearFeatureBaseline
 from rllab.baselines.zero_baseline import ZeroBaseline
 from rllab.envs.gym_env import GymEnv
@@ -26,17 +27,19 @@ policy = CategoricalMLPPolicy(
 #baseline = LinearFeatureBaseline(env_spec=env.spec)
 baseline = ZeroBaseline(env_spec=env.spec)
 
-algo = TRPO(
+algo = VPG(
     env=env,
     policy=policy,
     baseline=baseline,
-    batch_size=100,
+    batch_size=1000,
     max_path_length=1000,
     n_itr=100,
     discount=0.9,
-    step_size=0.01,
-    # optimizer=ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5))
-
+    optimizer_args=dict(
+        tf_optimizer_args=dict(
+            learning_rate=0.001,
+        )
+    )
 )
 
 algo.train()

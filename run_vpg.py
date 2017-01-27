@@ -29,9 +29,9 @@ N_ACTIONS = 2   # int; only discrete action space
 EXP_FOLDER = os.path.abspath("./experiments/{}".format(ENV_NAME))
 
 # training options
-NUM_ITER = 5000
-NUM_ROLLOUTS = 1000
-EVAL_FREQ = 100   # evaluate every N env steps
+NUM_ITER = 50000
+BATCH_SIZE = 1000
+EVAL_FREQ = 1   # evaluate every N env steps
 RECORD_VIDEO_FREQ = 1000
 GAMMA = 0.9
 ADV = False
@@ -58,13 +58,13 @@ if __name__ == '__main__':
                          gamma=GAMMA,
                          max_steps=MAX_ENV_STEPS)
         for i in xrange(NUM_ITER):
-            states, actions, returns, av_reward = agent.run_episode_n(NUM_ROLLOUTS)
+            states, actions, returns, av_reward = agent.run_batch_episodes(BATCH_SIZE)
             value_loss = 0.
             if ADV:
                 for _ in xrange(10):
                     value_loss = agent.train_batch_value(sess, states, returns)
             policy_loss, step = agent.train_batch_policy(sess, states, actions, returns)
-            if i % 1 == 0:
-                states, actions, returns, av_reward = agent.run_episode_n(1, sample=False)
+            if i % EVAL_FREQ == 0:
+                res = agent.run_episode(sample=False)
                 print 'Average undiscounted reward in iteration {} is {:.1f}, value loss is {:.1f}'.\
-                   format(i, av_reward, value_loss)
+                    format(i, len(res['actions']), value_loss)

@@ -1,11 +1,14 @@
 
 import tensorflow as tf
+import itertools
 import numpy as np
 
 from utils.math import discount_rewards
 
 # TODO: check how cutting off trajectories spoil final result (it causes incorrect returns in the end)
 # TODO: check how baseling should be fitted -- now hardcoded 100 epochs
+# TODO: add tf summary
+
 
 class VPGBase(object):
 
@@ -89,13 +92,15 @@ class VPGBase(object):
         """
         raise NotImplementedError
 
-    def _run_episode(self, sample=True):
+    def run_episode(self, sample=True):
         states = []
         actions = []
         rewards = []
         state = self.env.reset()
         for i in xrange(self.max_steps):
+
             action = self.choose_action(state, sample)
+            #print action, i
             next_state, reward, terminal, _ = self.env.step(action)
             states.append(state)
             actions.append(action)
@@ -116,10 +121,21 @@ class VPGBase(object):
         else:
             return np.argmax(prob_actions)
 
-    def run_episode_n(self, n, sample=True):
+    def run_batch_episodes(self, batch_size, sample=True):
         paths = []
-        for _ in xrange(n):
-            paths.append(self._run_episode(sample))
+        prev_len = 0
+        for t in itertools.count():
+            paths.append(self.run_episode(sample))
+            cur_len = sum([len(x['actions']) for x in paths])
+            if cur_len >= batch_size:
+                if t == 0:
+                    print 'WARNING: just one truncated trajectory was used for batch. Consider increasing batch size.'
+
+                ix = cur_len - prev_len
+                for k, v in paths[-1].iteritems():
+                    paths[-1][k] = v[:-ix]
+                break
+            prev_len = cur_len
         av_reward = np.array([x['rewards'].sum() for x in paths]).mean()
         states = np.concatenate([x['states'] for x in paths])
         actions = np.concatenate([x['actions'] for x in paths])
@@ -148,6 +164,6 @@ class VPGDense(VPGBase):
             out = tf.contrib.layers.flatten(self.states_ph)
             for n_hid in self.hidden:
                 out = tf.contrib.layers.fully_connected(out, n_hid)
-                out = tf.nn.relu(out)
+                out = tf.nn.tanh(out)
             out = tf.contrib.layers.fully_connected(out, 1)
         return tf.squeeze(out)
