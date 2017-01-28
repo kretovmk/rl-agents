@@ -30,7 +30,7 @@ class VanillaPG(BatchPolicyBase):
     """
     def __init__(self, state_shape, n_actions, learning_rate=0.001, clip_gradients=10., *args, **kwargs):
         self.state_shape = state_shape
-        self.n_action = n_actions
+        self.n_actions = n_actions
         self.clip_gradients = clip_gradients
         self.learning_rate = learning_rate
         super(VanillaPG, self).__init__(*args, **kwargs)
@@ -43,7 +43,7 @@ class VanillaPG(BatchPolicyBase):
         self.advantages_ph = tf.placeholder(shape=(None,), dtype=tf.float32, name='advantages')
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
 
-        self.actions_one_hot = tf.one_hot(self.actions_ph, depth=self.policy.n_a, dtype=tf.float32)
+        self.actions_one_hot = tf.one_hot(self.actions_ph, depth=self.n_actions, dtype=tf.float32)
         self.likelihood = tf.reduce_sum(tf.multiply(self.action_probs, self.actions_one_hot), axis=1)
         self.policy_loss = -1. * tf.reduce_mean(tf.multiply(tf.log(self.likelihood), self.advantages_ph), axis=0)
 

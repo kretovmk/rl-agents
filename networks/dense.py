@@ -27,9 +27,10 @@ class NetworkCategorialDense(NetworkBase):
                                                        weights_initializer=tf.contrib.layers.xavier_initializer())
 
             out = tf.nn.softmax(logits)
-            loss = tf.nn.softmax_cross_entropy_with_logits(logits, targets)
+            loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, targets))
             self.inp, self.out, self.targets, self.loss = inp, out, targets, loss
             self.params = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope)
+        return inp, out, targets, loss
 
 
 class NetworkRegDense(NetworkBase):
@@ -52,9 +53,10 @@ class NetworkRegDense(NetworkBase):
             out = tf.contrib.layers.fully_connected(out, self.n_outputs,
                                                     weights_initializer=tf.contrib.layers.xavier_initializer())
 
-            loss = tf.squared_difference(out, targets)
+            loss = tf.reduce_mean(tf.squared_difference(out, targets))
             self.inp, self.out, self.targets, self.loss = inp, out, targets, loss
             self.params = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope)
+        return inp, out, targets, loss
 
 
 class NetworkCategorialDenseKeras(NetworkBase):
@@ -79,5 +81,5 @@ class NetworkCategorialDenseKeras(NetworkBase):
 
         out = tf.nn.softmax(logits)
         loss = tf.nn.softmax_cross_entropy_with_logits(logits, targets)
-        self.inp, self.out, self.targets, self.loss = inp, out, targets, loss
+        return inp, out, targets, loss
 

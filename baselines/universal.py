@@ -13,7 +13,7 @@ class NetworkBaseline(BaselineBase):
 
     def fit(self, samples):
         x = samples['states']
-        y = samples['returns']
+        y = samples['returns'].reshape((-1, 1))
         loss = self.approximator.train(self.sess, x, y, self.n_epochs, self.batch_size)
         return loss
 

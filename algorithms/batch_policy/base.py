@@ -38,7 +38,7 @@ class BatchPolicyBase(object):
         self.baseline = baseline
         self.sampler = sampler
         self._init_variables()
-        self.summary_op = tf.merge_all_summaries()
+        self.summary_op = tf.summary.merge_all()
         self.train_writer = tf.summary.FileWriter(log_dir + '/train', sess.graph)
         self.test_writer = tf.summary.FileWriter(log_dir + '/test', sess.graph)
         self.sess.run(tf.global_variables_initializer())
@@ -61,7 +61,7 @@ class BatchPolicyBase(object):
 
             start_time = time.time()
             self.baseline.fit(samples)
-            samples = self.baseline.predict(samples)
+            samples = self.baseline.predict_value(samples)
             logger.info('Fitted baseline, took {:.2f} sec'.format(time.time() - start_time))
 
             start_time = time.time()
@@ -73,7 +73,7 @@ class BatchPolicyBase(object):
                 logger.info('Evaluation. Reward: {:.1f}; Episode length: {}.'.format(total_reward, episode_length))
 
     def test_agent(self, sample):
-        total_reward, episode_length = self.sampler.run_episode(sample)
+        total_reward, episode_length = self.sampler.test_agent(sample)
         return total_reward, episode_length
 
     def _init_variables(self):

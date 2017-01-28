@@ -25,13 +25,13 @@ class SamplerBase(object):
         state = self.env.reset()
         state = self.state_processor.process(self.sess, state)
         for i in xrange(self.max_steps):
-            prob_actions = self.policy.predict_x(state)
+            prob_actions = self.policy.predict_x(self.sess, state)
             if sample:
                 action = np.random.choice(np.arange(len(prob_actions)), p=prob_actions)
             else:
                 action = np.argmax(prob_actions)
             next_state, reward, terminal, _ = self.env.step(action)
-            next_state = self.state_processor(self.sess, next_state)
+            next_state = self.state_processor.process(self.sess, next_state)
             states.append(state)
             actions.append(action)
             rewards.append(reward)
@@ -53,7 +53,7 @@ class SamplerBase(object):
             if cur_len >= batch_size:
                 if t == 0:
                     logger.info('WARNING: just one truncated trajectory for batch. Consider increasing batch size.')
-                ix = cur_len - prev_len
+                ix = cur_len - batch_size
                 for k, v in paths[-1].iteritems():
                     paths[-1][k] = v[:-ix]
                 break

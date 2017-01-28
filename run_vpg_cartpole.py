@@ -21,7 +21,7 @@ EXP_FOLDER = os.path.abspath("./experiments/{}".format(ENV_NAME))
 
 # training options
 NUM_ITER = 50000
-BATCH_SIZE = 1000
+BATCH_SIZE = 100
 EVAL_FREQ = 1   # evaluate every N env steps
 RECORD_VIDEO_FREQ = 1000
 GAMMA = 0.9

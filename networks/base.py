@@ -10,6 +10,8 @@ class NetworkBase(object):
         self.n_outputs = n_outputs
         self.scope = scope
         self.inp, self.out, self.targets, self.loss = self._build_network()
+        optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
+        self.train_op = optimizer.minimize(self.loss)
 
 
     def _build_network(self):
@@ -30,21 +32,19 @@ class NetworkBase(object):
             yield x[excerpt], y[excerpt]
 
     def train(self, sess, x, y, n_epochs=1, batch_size=32, shuffle=True):
-        optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
-        train_op = optimizer.minimize(self.loss)
         losses = []
         for i in xrange(n_epochs):
             for batch_x, batch_y in self._iterate_minibatches(x, y, batch_size, shuffle):
-                loss = sess.run([train_op, self.loss], feed_dict={self.inp: batch_x,
+                _, loss = sess.run([self.train_op, self.loss], feed_dict={self.inp: batch_x,
                                                                   self.targets: batch_y})
                 losses.append(loss)
         return np.array(losses).mean()
 
     def predict_x(self, sess, x):
-        return sess.run([tf.squeeze(self.out, axis=0)], feed_dict={self.inp: [x]})
+        return sess.run(tf.squeeze(self.out, axis=0), feed_dict={self.inp: [x]})
 
     def predict_batch(self, sess, batch_x):
-        return sess.run([self.out], feed_dict={self.inp: batch_x})
+        return sess.run(tf.squeeze(self.out), feed_dict={self.inp: batch_x})
 
 
 
