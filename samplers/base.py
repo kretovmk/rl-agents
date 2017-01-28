@@ -1,4 +1,5 @@
 
+import tensorflow as tf
 import numpy as np
 import itertools
 import logging
@@ -25,7 +26,7 @@ class SamplerBase(object):
         state = self.env.reset()
         state = self.state_processor.process(self.sess, state)
         for i in xrange(self.max_steps):
-            prob_actions = self.policy.predict_x(self.sess, state)[0]
+            prob_actions = self.policy.predict_x(self.sess, state)
             if sample:
                 action = np.random.choice(np.arange(len(prob_actions)), p=prob_actions)
             else:
@@ -66,4 +67,6 @@ class SamplerBase(object):
         res = self.run_episode(gamma=1., sample=sample)
         total_reward = res['returns'][0]
         episode_length = len(res['returns'])
+        tf.summary.scalar("test/total_reward", total_reward)
+        tf.summary.scalar("test/episode_length", episode_length)
         return total_reward, episode_length

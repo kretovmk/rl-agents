@@ -18,7 +18,7 @@ ENV_NAME = 'CartPole-v0'   # gym's env name
 MAX_ENV_STEPS = 1000   # limit for max steps during episode
 ENV_STATE_SHAPE = (4,)   # tuple
 N_ACTIONS = 2   # int; only discrete action space
-EXP_FOLDER = os.path.abspath("./experiments/{}".format(ENV_NAME))
+EXP_FOLDER = os.path.abspath("temp/tf/experiments/{}".format(ENV_NAME))
 
 # training options
 NUM_ITER = 50000
@@ -40,12 +40,12 @@ if __name__ == '__main__':
 
     # training
     with tf.Session() as sess:
-        policy = NetworkCategorialDense(n_hidden=(16,),
+        policy = NetworkCategorialDense(n_hidden=(64,),
                                         scope='policy',
                                         inp_shape=ENV_STATE_SHAPE,
                                         n_outputs=N_ACTIONS)
         state_processor = EmptyProcessor()
-        baseline_approximator = NetworkRegDense(n_hidden=(16,),
+        baseline_approximator = NetworkRegDense(n_hidden=(64,),
                                                 scope='baseline',
                                                 inp_shape=ENV_STATE_SHAPE,
                                                 n_outputs=1)
@@ -65,9 +65,11 @@ if __name__ == '__main__':
                           policy=policy,
                           baseline=baseline,
                           sampler=sampler,
-                          log_dir='experiments',
+                          log_dir=EXP_FOLDER,
                           state_shape=ENV_STATE_SHAPE,
                           n_actions=N_ACTIONS)
         agent.train_agent(n_iter=NUM_ITER,
                           eval_freq=EVAL_FREQ)
+
+#/home/dd210/Desktop/rl-agents/tmp/tf/experiments/CartPole-v0
 

@@ -1,7 +1,6 @@
 *experiments
 *tfevents*
 .idea/
-temp/
 logs/
 *.log
 *.pyc

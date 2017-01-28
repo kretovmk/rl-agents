@@ -41,7 +41,6 @@ class VanillaPG(BatchPolicyBase):
         self.action_probs = self.policy.out
         self.actions_ph = tf.placeholder(shape=(None,), dtype=tf.int32, name='actions')
         self.advantages_ph = tf.placeholder(shape=(None,), dtype=tf.float32, name='advantages')
-        self.global_step = tf.Variable(0, name='global_step', trainable=False)
 
         self.actions_one_hot = tf.one_hot(self.actions_ph, depth=self.n_actions, dtype=tf.float32)
         self.likelihood = tf.reduce_sum(tf.multiply(self.action_probs, self.actions_one_hot), axis=1)
@@ -54,7 +53,7 @@ class VanillaPG(BatchPolicyBase):
 
         tf.summary.scalar("model/policy_loss", self.policy_loss)
         tf.summary.scalar("model/policy_grad_global_norm", tf.global_norm(policy_grads))
-        tf.summary.scalar("model/policy_var_global_norm", tf.global_norm(self.policy.params))
+        tf.summary.scalar("model/policy_weights_global_norm", tf.global_norm(self.policy.params))
 
 
     def _optimize_policy(self, samples):
@@ -64,6 +63,7 @@ class VanillaPG(BatchPolicyBase):
         feed_dict = {self.policy.inp: states,
                      self.actions_ph: actions,
                      self.advantages_ph: adv}
-        _, global_step, loss = self.sess.run([self.train_policy_op, self.global_step, self.policy_loss],
-                                             feed_dict=feed_dict)
+        summary, _, global_step, loss = self.sess.run([self.summary_op, self.train_policy_op, self.global_step,
+                                              self.policy_loss], feed_dict=feed_dict)
+        self.train_writer.add_summary(summary, global_step)
         return loss, global_step

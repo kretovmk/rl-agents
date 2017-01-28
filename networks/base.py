@@ -10,6 +10,7 @@ class NetworkBase(object):
         self.n_outputs = n_outputs
         self.scope = scope
         self.inp, self.out, self.targets, self.loss = self._build_network()
+        self.out_sq = tf.squeeze(self.out)
         optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
         self.train_op = optimizer.minimize(self.loss)
 
@@ -41,7 +42,7 @@ class NetworkBase(object):
         return np.array(losses).mean()
 
     def predict_x(self, sess, x):
-        return sess.run(self.out, feed_dict={self.inp: [x]})
+        return sess.run(self.out_sq, feed_dict={self.inp: [x]})
 
     def predict_batch(self, sess, batch_x):
         return sess.run(self.out, feed_dict={self.inp: batch_x})

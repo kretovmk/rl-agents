@@ -37,12 +37,14 @@ class BatchPolicyBase(object):
         self.policy = policy
         self.baseline = baseline
         self.sampler = sampler
+        self.global_step = tf.Variable(0, name='global_step', trainable=False)
         self._init_variables()
         self.summary_op = tf.summary.merge_all()
         self.train_writer = tf.summary.FileWriter(log_dir + '/train', sess.graph)
         self.test_writer = tf.summary.FileWriter(log_dir + '/test', sess.graph)
         self.sess.run(tf.global_variables_initializer())
         logger.info('Agent variables initialized.')
+        logger.info('Logging directory: {}'.format(log_dir))
 
     def collect_samples(self):
         return self.sampler.collect_samples()
@@ -74,6 +76,12 @@ class BatchPolicyBase(object):
 
     def test_agent(self, sample):
         total_reward, episode_length = self.sampler.test_agent(sample)
+
+        test_summary = tf.Summary()
+        test_summary.value.add(simple_value=total_reward, tag='total_reward')
+        t = self.sess.run(self.global_step)
+        self.test_writer.add_summary(test_summary, t)
+
         return total_reward, episode_length
 
     def _init_variables(self):
