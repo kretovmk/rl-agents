@@ -8,5 +8,5 @@ class BaselineBase(object):
     def fit(self, samples):
         raise NotImplementedError
 
-    def predict(self, samples):
+    def predict_value(self, samples):
         raise NotImplementedError

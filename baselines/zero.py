@@ -12,6 +12,6 @@ class ZeroBaseline(BaselineBase):
     def fit(self, samples):
         pass
 
-    def predict(self, samples):
+    def predict_value(self, samples):
         samples['baseline'] = np.zeros((len(samples['states']),), dtype=np.float32)
         return samples

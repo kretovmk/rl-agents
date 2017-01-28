@@ -25,11 +25,12 @@ class SamplerBase(object):
         state = self.env.reset()
         state = self.state_processor.process(self.sess, state)
         for i in xrange(self.max_steps):
-            prob_actions = self.policy.predict_x(self.sess, state)
+            prob_actions = self.policy.predict_x(self.sess, state)[0]
             if sample:
                 action = np.random.choice(np.arange(len(prob_actions)), p=prob_actions)
             else:
                 action = np.argmax(prob_actions)
+            #action = 0
             next_state, reward, terminal, _ = self.env.step(action)
             next_state = self.state_processor.process(self.sess, next_state)
             states.append(state)
@@ -46,7 +47,6 @@ class SamplerBase(object):
 
     def collect_samples(self, gamma, batch_size, sample=True):
         paths = []
-        prev_len = 0
         for t in itertools.count():
             paths.append(self.run_episode(gamma, sample))
             cur_len = sum([len(x['actions']) for x in paths])
@@ -57,7 +57,6 @@ class SamplerBase(object):
                 for k, v in paths[-1].iteritems():
                     paths[-1][k] = v[:-ix]
                 break
-            prev_len = cur_len
         states = np.concatenate([x['states'] for x in paths])
         actions = np.concatenate([x['actions'] for x in paths])
         returns = np.concatenate([x['returns'] for x in paths])

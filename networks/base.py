@@ -41,10 +41,10 @@ class NetworkBase(object):
         return np.array(losses).mean()
 
     def predict_x(self, sess, x):
-        return sess.run(tf.squeeze(self.out, axis=0), feed_dict={self.inp: [x]})
+        return sess.run(self.out, feed_dict={self.inp: [x]})
 
     def predict_batch(self, sess, batch_x):
-        return sess.run(tf.squeeze(self.out), feed_dict={self.inp: batch_x})
+        return sess.run(self.out, feed_dict={self.inp: batch_x})
 
 
 

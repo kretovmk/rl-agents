@@ -19,5 +19,5 @@ class NetworkBaseline(BaselineBase):
 
     def predict_value(self, samples):
         x = samples['states']
-        samples['baseline'] = self.approximator.predict_batch(self.sess, x)
+        samples['baseline'] = self.approximator.predict_batch(self.sess, x).reshape((-1))
         return samples

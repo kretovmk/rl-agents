@@ -7,6 +7,7 @@ import tensorflow as tf
 from utils.preprocessing import EmptyProcessor
 from algorithms.batch_policy.vpg import VanillaPG
 from baselines.universal import NetworkBaseline
+from baselines.zero import ZeroBaseline
 from networks.dense import NetworkCategorialDense, NetworkRegDense
 from samplers.base import SamplerBase
 
@@ -21,7 +22,7 @@ EXP_FOLDER = os.path.abspath("./experiments/{}".format(ENV_NAME))
 
 # training options
 NUM_ITER = 50000
-BATCH_SIZE = 100
+BATCH_SIZE = 1000
 EVAL_FREQ = 1   # evaluate every N env steps
 RECORD_VIDEO_FREQ = 1000
 GAMMA = 0.9
@@ -39,12 +40,12 @@ if __name__ == '__main__':
 
     # training
     with tf.Session() as sess:
-        policy = NetworkCategorialDense(n_hidden=(32,),
+        policy = NetworkCategorialDense(n_hidden=(16,),
                                         scope='policy',
                                         inp_shape=ENV_STATE_SHAPE,
                                         n_outputs=N_ACTIONS)
         state_processor = EmptyProcessor()
-        baseline_approximator = NetworkRegDense(n_hidden=(32,),
+        baseline_approximator = NetworkRegDense(n_hidden=(16,),
                                                 scope='baseline',
                                                 inp_shape=ENV_STATE_SHAPE,
                                                 n_outputs=1)
@@ -52,6 +53,7 @@ if __name__ == '__main__':
                                    approximator=baseline_approximator,
                                    n_epochs=5,
                                    batch_size=32)
+        #baseline = ZeroBaseline()
         sampler = SamplerBase(sess=sess,
                               env=env,
                               policy=policy,
