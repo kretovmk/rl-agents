@@ -4,16 +4,20 @@ from baselines.base import BaselineBase
 
 class NetworkBaseline(BaselineBase):
 
-    def __init__(self, approximator=None):
+    def __init__(self, sess, approximator, n_epochs, batch_size):
+        self.sess = sess
         self.approximator = approximator
+        self.n_epochs = n_epochs
+        self.batch_size = batch_size
         super(NetworkBaseline, self).__init__()
 
-    def fit(self, sess, samples, n_epochs=1, batch_size=32):
+    def fit(self, samples):
         x = samples['states']
         y = samples['returns']
-        loss = self.approximator.train(sess, x, y, n_epochs, batch_size)
+        loss = self.approximator.train(self.sess, x, y, self.n_epochs, self.batch_size)
         return loss
 
-    def predict_value(self, sess, samples):
+    def predict_value(self, samples):
         x = samples['states']
-        self.approximator.predict(sess, x)
+        samples['baseline'] = self.approximator.predict_batch(self.sess, x)
+        return samples

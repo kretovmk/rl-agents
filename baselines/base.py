@@ -5,8 +5,8 @@ class BaselineBase(object):
     def __init__(self):
         pass
 
-    def fit(self):
+    def fit(self, samples):
         raise NotImplementedError
 
-    def predict(self):
+    def predict(self, samples):
         raise NotImplementedError

@@ -1,10 +1,11 @@
 
 import time
 import logging
-import itertools
 import tensorflow as tf
 
 logger = logging.getLogger('__main__')
+
+# TODO: add multiprocessing to sampling. Is it necessary or other steps?
 
 
 class BatchPolicyBase(object):
@@ -28,7 +29,8 @@ class BatchPolicyBase(object):
                  batch_size,
                  policy,
                  baseline,
-                 sampler):
+                 sampler,
+                 log_dir='experiments'):
         self.sess = sess
         self.gamma = gamma
         self.batch_size = batch_size
@@ -36,6 +38,9 @@ class BatchPolicyBase(object):
         self.baseline = baseline
         self.sampler = sampler
         self._init_variables()
+        self.summary_op = tf.merge_all_summaries()
+        self.train_writer = tf.summary.FileWriter(log_dir + '/train', sess.graph)
+        self.test_writer = tf.summary.FileWriter(log_dir + '/test', sess.graph)
         self.sess.run(tf.global_variables_initializer())
         logger.info('Agent variables initialized.')
 
@@ -56,14 +61,16 @@ class BatchPolicyBase(object):
 
             start_time = time.time()
             self.baseline.fit(samples)
+            samples = self.baseline.predict(samples)
             logger.info('Fitted baseline, took {:.2f} sec'.format(time.time() - start_time))
 
             start_time = time.time()
-            self._optimize_policy()
+            self._optimize_policy(samples)
             logger.info('Optimized policy, took {:.2f} sec'.format(time.time() - start_time))
 
             if n_iter % eval_freq == 0:
-                self.test_agent(sample=False)
+                total_reward, episode_length = self.test_agent(sample=False)
+                logger.info('Evaluation. Reward: {:.1f}; Episode length: {}.'.format(total_reward, episode_length))
 
     def test_agent(self, sample):
         total_reward, episode_length = self.sampler.run_episode(sample)
@@ -75,7 +82,7 @@ class BatchPolicyBase(object):
         """
         raise NotImplementedError
 
-    def _optimize_policy(self):
+    def _optimize_policy(self, samples):
         """
         Optimize policy on the basis of data collected.
         """

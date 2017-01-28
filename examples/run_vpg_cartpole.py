@@ -1,16 +1,20 @@
+
 import logging
 import os
-
 import gym
 import tensorflow as tf
 
-from base.batch_policy.vpg import VPGDense
+from utils.preprocessing import EmptyProcessor
+from algorithms.batch_policy.vpg import VanillaPG
+from baselines.universal import NetworkBaseline
+from networks.dense import NetworkCategorialDense, NetworkRegDense
+from samplers.base import SamplerBase
 
 # general options
 USE_CHECKPOINT = False    # loading from saved checkpoint if possible
+CONCAT_LENGTH = 1  # should be >= 1 (mainly needed for concatenation Atari frames)
 ENV_NAME = 'CartPole-v0'   # gym's env name
 MAX_ENV_STEPS = 1000   # limit for max steps during episode
-CONCAT_LENGTH = 1  # should be >= 1 (mainly needed for concatenation Atari frames)
 ENV_STATE_SHAPE = (4,)   # tuple
 N_ACTIONS = 2   # int; only discrete action space
 EXP_FOLDER = os.path.abspath("./experiments/{}".format(ENV_NAME))
@@ -35,23 +39,33 @@ if __name__ == '__main__':
 
     # training
     with tf.Session() as sess:
-        agent = VPGDense(hidden=(32,),
-                         sess=sess,
-                         env=env,
-                         state_shape=ENV_STATE_SHAPE,
-                         n_actions=N_ACTIONS,
-                         state_processor=None,
-                         adv=ADV,
-                         gamma=GAMMA,
-                         max_steps=MAX_ENV_STEPS)
-        for i in xrange(NUM_ITER):
-            states, actions, returns, av_reward = agent.run_batch_episodes(BATCH_SIZE)
-            value_loss = 0.
-            if ADV:
-                for _ in xrange(100):
-                    value_loss = agent.train_batch_value(sess, states, returns)
-            policy_loss, step = agent.train_batch_policy(sess, states, actions, returns)
-            if i % EVAL_FREQ == 0:
-                res = agent.run_episode(sample=False)
-                print 'Average undiscounted reward in iteration {} is {:.1f}, value loss is {:.1f}'.\
-                    format(i, len(res['actions']), value_loss)
+        policy = NetworkCategorialDense(n_hidden=(32,),
+                                        scope='policy',
+                                        inp_shape=ENV_STATE_SHAPE,
+                                        n_outputs=N_ACTIONS)
+        state_processor = EmptyProcessor()
+        baseline_approximator = NetworkRegDense(n_hidden=(32,),
+                                                scope='baseline',
+                                                inp_shape=ENV_STATE_SHAPE,
+                                                n_outputs=1)
+        baseline = NetworkBaseline(sess=sess,
+                                   approximator=baseline_approximator,
+                                   n_epochs=5,
+                                   batch_size=32)
+        sampler = SamplerBase(sess=sess,
+                              env=env,
+                              policy=policy,
+                              state_processor=state_processor,
+                              max_steps=MAX_ENV_STEPS)
+        agent = VanillaPG(sess=sess,
+                          gamma=GAMMA,
+                          batch_size=BATCH_SIZE,
+                          policy=policy,
+                          baseline=baseline,
+                          sampler=sampler,
+                          log_dir='experiments',
+                          state_shape=ENV_STATE_SHAPE,
+                          n_actions=N_ACTIONS)
+        agent.train_agent(n_iter=NUM_ITER,
+                          eval_freq=EVAL_FREQ)
+

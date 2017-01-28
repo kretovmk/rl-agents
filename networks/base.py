@@ -5,8 +5,12 @@ import tensorflow as tf
 
 class NetworkBase(object):
 
-    def __init__(self):
+    def __init__(self, scope, inp_shape, n_outputs):
+        self.inp_shape = inp_shape
+        self.n_outputs = n_outputs
+        self.scope = scope
         self.inp, self.out, self.targets, self.loss = self._build_network()
+
 
     def _build_network(self):
         raise NotImplementedError
