@@ -11,14 +11,15 @@ class BatchPolicyBase(object):
     """
     Base object for batch optimization policy algorithms.
         Key ingredients:
-            env -- environment
-            state processor -- preprocessing of states
-            policy -- policy to optimize
+            policy -- approximator which represents policy to optimize
             baseline -- value to use in calculation of advantage function
             sampler -- collector of data from environment
-            optimizer -- optimizer of policy (1st order, 2nd order etc.)
         Other attributes:
+            batch_size -- how many timesteps to collect for 1 iteration of policy
             gamma -- discounting factor
+            sess -- tf session
+
+    Child classes should implement methods _init_variables and _optimize_policy.
     """
 
     def __init__(self,
@@ -27,15 +28,13 @@ class BatchPolicyBase(object):
                  batch_size,
                  policy,
                  baseline,
-                 sampler,
-                 optimizer):
+                 sampler):
         self.sess = sess
         self.gamma = gamma
         self.batch_size = batch_size
         self.policy = policy
         self.baseline = baseline
         self.sampler = sampler
-        self.optimizer = optimizer
         self._init_variables()
         self.sess.run(tf.global_variables_initializer())
         logger.info('Agent variables initialized.')

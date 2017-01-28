@@ -1,7 +1,5 @@
 
 
-
-
 class BaselineBase(object):
 
     def __init__(self):
