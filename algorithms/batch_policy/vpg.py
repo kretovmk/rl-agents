@@ -1,11 +1,11 @@
+
 import itertools
 import logging
-
 import numpy as np
 import tensorflow as tf
+
 from keras.layers import Input, Dense
 from keras.models import Model
-
 from algorithms.batch_policy.base import BatchPolicyBase
 from utils.math import discount_rewards
 
@@ -169,3 +169,6 @@ class VPGDense(VPGBase):
         model = Model(input=inputs, output=out)
         value = model(self.states_ph)
         return tf.squeeze(value)
+
+
+#av_reward = np.array([x['rewards'].sum() for x in paths]).mean()

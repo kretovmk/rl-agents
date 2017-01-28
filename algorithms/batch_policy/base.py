@@ -23,17 +23,15 @@ class BatchPolicyBase(object):
 
     def __init__(self,
                  sess,
-                 env,
-                 state_processor,
                  gamma,
+                 batch_size,
                  policy,
                  baseline,
                  sampler,
                  optimizer):
         self.sess = sess
-        self.env = env
-        self.state_processor = state_processor
         self.gamma = gamma
+        self.batch_size = batch_size
         self.policy = policy
         self.baseline = baseline
         self.sampler = sampler
@@ -46,21 +44,16 @@ class BatchPolicyBase(object):
         return self.sampler.collect_samples()
 
     def process_samples(self, samples):
-        return self.state_processor.process_samples(samples)
+        return self.sampler.process_samples(samples)
 
     def train_agent(self, n_iter, eval_freq):
         logger.info('Started training.')
         for i in xrange(n_iter):
-
-            logger.info('\n\nIteration {} \n'.format(i))
-
-            start_time = time.time()
-            raw_samples = self.sampler.collect_samples()
-            logger.info('Collected raw samples, took {:.2f} sec'.format(time.time() - start_time))
+            logger.info('\n\n' + '*'*40 + '\n' + 'Iteration {} \n'.format(i))
 
             start_time = time.time()
-            samples = self.sampler.process_samples(raw_samples, self.state_processor)
-            logger.info('Processed samples, took {:.2f} sec'.format(time.time() - start_time))
+            samples = self.sampler.collect_samples(self.gamma, self.batch_size)
+            logger.info('Collected samples, took {:.2f} sec'.format(time.time() - start_time))
 
             start_time = time.time()
             self.baseline.fit(samples)
@@ -71,18 +64,11 @@ class BatchPolicyBase(object):
             logger.info('Optimized policy, took {:.2f} sec'.format(time.time() - start_time))
 
             if n_iter % eval_freq == 0:
-                self.test_agent()
+                self.test_agent(sample=False)
 
-    def test_agent(self, sample=False):
-        state = self.env.reset()
-        total_reward = 0.
-        for t in itertools.count():
-            action = self.policy.choose_action(state, sample)
-            state, reward, terminal, _ = self.env.step(action)
-            total_reward += reward
-            if terminal:
-                break
-        return total_reward, t
+    def test_agent(self, sample):
+        total_reward, episode_length = self.sampler.run_episode(sample)
+        return total_reward, episode_length
 
     def _init_variables(self):
         """

@@ -1,4 +1,9 @@
+
 # Implementation of RL algorithms
+
+Discrete action space, continuous state space, episodic setting.
+
+# Methods implemented / in process:
 
 1. Value methods: Q-learning (Double Q-learning, Duelling, etc).
 2. Policy gradient: Batch policy optimization (VanillaPG, TRPO).
