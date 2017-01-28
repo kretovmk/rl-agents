@@ -4,12 +4,11 @@
 
 class BaselineBase(object):
 
-    def __init__(self, approximator, optimizer):
-        self.approximator = approximator
-        self.optimizer = optimizer
+    def __init__(self):
+        pass
 
-    def fit(self, samples):
+    def fit(self):
         raise NotImplementedError
 
-    def predict(self, samples):
+    def predict(self):
         raise NotImplementedError

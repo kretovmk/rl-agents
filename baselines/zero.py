@@ -6,10 +6,10 @@ from baselines.base import BaselineBase
 
 class ZeroBaseline(BaselineBase):
 
-    def __init__(self, approximator=None, optimizer=None):
-        super(ZeroBaseline, self).__init__(approximator, optimizer)
+    def __init__(self):
+        super(ZeroBaseline, self).__init__()
 
-    def fit(self, samples):
+    def fit(self):
         pass
 
     def predict(self, samples):
