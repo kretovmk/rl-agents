@@ -6,7 +6,7 @@ import tensorflow as tf
 class NetworkBase(object):
 
     def __init__(self):
-        self.inp, self.out, self.loss = self._build_network()
+        self.inp, self.out, self.targets, self.loss = self._build_network()
 
     def _build_network(self):
         raise NotImplementedError
@@ -32,7 +32,7 @@ class NetworkBase(object):
         for i in xrange(n_epochs):
             for batch_x, batch_y in self._iterate_minibatches(x, y, batch_size, shuffle):
                 loss = sess.run([train_op, self.loss], feed_dict={self.inp: batch_x,
-                                                                  self.out: batch_y})
+                                                                  self.targets: batch_y})
                 losses.append(loss)
         return np.array(losses).mean()
 

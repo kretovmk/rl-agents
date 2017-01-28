@@ -1,12 +1,12 @@
-
-import tensorflow as tf
 import itertools
 import logging
-import numpy as np
 
-from algorithms.batch_policy.base import BatchPolicyBase
+import numpy as np
+import tensorflow as tf
 from keras.layers import Input, Dense
 from keras.models import Model
+
+from algorithms.batch_policy.base import BatchPolicyBase
 from utils.math import discount_rewards
 
 # TODO: check how cutting off trajectories spoil final result (it causes incorrect returns in the end)
@@ -141,6 +141,7 @@ class VanillaPolicyGradient(BatchPolicyBase):
         actions = np.concatenate([x['actions'] for x in paths])
         returns = np.concatenate([x['returns'] for x in paths])
         return states, actions, returns, av_reward
+
 
 
 class VPGDense(VPGBase):

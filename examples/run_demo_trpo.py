@@ -12,7 +12,7 @@ from utils.preprocessing import EmptyProcessor
 """
 TRPO with function approximation.
 
-Based on code: https://github.com/tilarids/reinforcement_learning_playground/blob/master/trpo_agent.py
+Based on code: https://github.com/tilarids/reinforcement_learning_playground/blob/master/trpo.py
 
 Link to article: https://arxiv.org/abs/1502.05477
 

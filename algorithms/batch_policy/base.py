@@ -55,11 +55,11 @@ class BatchPolicyBase(object):
             logger.info('\n\nIteration {} \n'.format(i))
 
             start_time = time.time()
-            raw_samples = self.collect_samples()
+            raw_samples = self.sampler.collect_samples()
             logger.info('Collected raw samples, took {:.2f} sec'.format(time.time() - start_time))
 
             start_time = time.time()
-            samples = self.process_samples(raw_samples)
+            samples = self.sampler.process_samples(raw_samples, self.state_processor)
             logger.info('Processed samples, took {:.2f} sec'.format(time.time() - start_time))
 
             start_time = time.time()

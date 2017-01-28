@@ -11,9 +11,8 @@ logs/
 *_temp.ipynb
 *.ipynb_checkpoints
 *.txt
-temp*
+*temp*
 Untitled*.ipynb
 *_test.py
-algorithms/batch_policy/_temp.py
 *.data
 other/
