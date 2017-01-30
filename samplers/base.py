@@ -23,20 +23,22 @@ class SamplerBase(object):
         states = []
         actions = []
         rewards = []
+        prob_actions = []
         state = self.env.reset()
         state = self.state_processor.process(self.sess, state)
         for i in xrange(self.max_steps):
-            prob_actions = self.policy.predict_x(self.sess, state)
+            probs = self.policy.predict_x(self.sess, state)
             if sample:
-                action = np.random.choice(np.arange(len(prob_actions)), p=prob_actions)
+                action = np.random.choice(np.arange(len(probs)), p=probs)
             else:
-                action = np.argmax(prob_actions)
+                action = np.argmax(probs)
             #action = 0
             next_state, reward, terminal, _ = self.env.step(action)
             next_state = self.state_processor.process(self.sess, next_state)
             states.append(state)
             actions.append(action)
             rewards.append(reward)
+            prob_actions.append(probs)
             state = next_state
             if terminal:
                 break
@@ -44,6 +46,7 @@ class SamplerBase(object):
         return dict(states=np.array(states),
                     actions=np.array(actions),
                     rewards=np.array(rewards),
+                    prob_actions=np.array(prob_actions),
                     returns=returns)
 
     def collect_samples(self, gamma, batch_size, sample=True):
@@ -60,8 +63,9 @@ class SamplerBase(object):
                 break
         states = np.concatenate([x['states'] for x in paths])
         actions = np.concatenate([x['actions'] for x in paths])
+        prob_actions = np.concatenate([x['prob_actions'] for x in paths])
         returns = np.concatenate([x['returns'] for x in paths])
-        return dict(states=states, actions=actions, returns=returns)
+        return dict(states=states, actions=actions, returns=returns, prob_actions=prob_actions)
 
     def test_agent(self, sample=False):
         res = self.run_episode(gamma=1., sample=sample)

@@ -23,22 +23,6 @@ def cat_sample(prob_nk):
     return out
 
 
-def var_shape(x):
-    out = [k.value for k in x.get_shape()]
-    assert all(isinstance(a, int) for a in out), \
-        "shape function assumes that shape is fully known"
-    return out
-
-
-def flat_gradients(loss, var_list):
-    """
-    Same as tf.gradients but returns flat tensor.
-    """
-    grads = tf.gradients(loss, var_list)
-    return tf.concat(0, [tf.reshape(grad, [np.prod(var_shape(v))])
-                       for (v, grad) in zip(var_list, grads)])
-
-
 def line_search(f, x, max_step):
     """
     Simple line search algorithm. That is, having objective f and initial value
@@ -60,7 +44,6 @@ def line_search(f, x, max_step):
           step_frac *= shrink_multiplier
     logger.info("Can not find an improvement with line search")
     return x
-
 
 
 def conjugate_gradient(f_Ax, b, cg_iters=10, residual_tol=1e-10):

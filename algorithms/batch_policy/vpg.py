@@ -1,17 +1,8 @@
 
-import itertools
 import logging
-import numpy as np
 import tensorflow as tf
 
-from keras.layers import Input, Dense
-from keras.models import Model
 from algorithms.batch_policy.base import BatchPolicyBase
-from utils.math import discount_rewards
-
-# TODO: check how cutting off trajectories spoil final result (it causes incorrect returns in the end)
-# TODO: check how baseling should be fitted -- now hardcoded 100 epochs
-# TODO: add tf summary
 
 logger = logging.getLogger('__main__')
 

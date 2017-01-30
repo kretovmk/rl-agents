@@ -1,284 +1,138 @@
 
+import logging
 import tensorflow as tf
 import numpy as np
-import logging
-import itertools
 
-from utils.math import cat_sample, line_search, discount_rewards, conjugate_gradient
-from utils.misc import var_shape, flat_gradients
+from algorithms.batch_policy.base import BatchPolicyBase
+from utils.tf_utils import flat_gradients, var_shape, SetFromFlat, GetFlat
+from utils.math import conjugate_gradient
 
 logger = logging.getLogger('__main__')
 
-# TODO: 1. compare conj. gradients with inversing matrix
-# TODO: compare self-made CG with scipy realization
-# TODO: check line search. looks not optimal...?
-# TODO: check discount reward time -- self.made realization and through scipy signal
 
-# TODO: decrease line search steps from 1000 after debugging
-
-DTYPE = tf.float32
-TOL = 1e-8
-
-
-class TRPOAgent(object):
+class TRPO(BatchPolicyBase):
     """
-    Class for agent governed by TRPO.
+    TRPO with function approximation and baseline. No bootstrapping used.
+
+    Refs:
+        1. https://arxiv.org/abs/1502.05477
+        2. https://github.com/wojzaremba/trpo/blob/master/main.py
+        3. https://github.com/joschu/modular_rl/blob/master/modular_rl/trpo.py
+        4. RLLAB
+
+    Limitations:
+    1. Discrete action space
+    2. Episodic tasks (but may work with non-episodic, like CartPole ).
     """
-    def __init__(self, sess,
-                       env,
-                       state_shape,
-                       policy,
-                       value,
-                       state_processor,
-                       gamma=0.99,
-                       max_steps=200
-                 ):
-        self.sess = sess
-        self.env = env
+    def __init__(self, state_shape, n_actions, learning_rate=0.001, clip_gradients=10., *args, **kwargs):
         self.state_shape = state_shape
-        self.policy = policy
-        self.value = value
-        self.state_processor = state_processor
-        self.gamma = gamma
-        self.max_steps = max_steps
+        self.n_actions = n_actions
+        self.clip_gradients = clip_gradients
+        self.learning_rate = learning_rate
+        super(TRPO, self).__init__(*args, **kwargs)
 
-        self.state_ph = tf.placeholder(shape=(None,) + self.state_shape, dtype=DTYPE, name='states')
+    def _init_variables(self):
 
-        # TODO: prev_obs, prev_action -- why needed?
+        tiny = 1e-6
 
-        self.cur_action_1h = tf.placeholder(shape=(None, self.env.action_space.n), dtype=DTYPE, name='cur_actions')
-        #self.prev_action_1h = tf.placeholder(shape=(None, self.env.action_space.n), dtype=DTYPE, name='prev_actions')
-        self.advantages = tf.placeholder(shape=(None,), dtype=DTYPE, name='advantages')
-        self.prev_policy = tf.placeholder(shape=(None, self.env.action_space.n), dtype=DTYPE, name='prev_policy')
+        self.action_probs = self.policy.out
+        self.prev_action_probs = tf.placeholder(shape=(None, self.n_actions), dtype=tf.int32, name='actions')
+        self.states_ph = self.policy.inp
+        self.actions_ph = tf.placeholder(shape=(None,), dtype=tf.int32, name='actions')
+        self.advantages_ph = tf.placeholder(shape=(None,), dtype=tf.float32, name='advantages')
 
-        # TODO: why 'returns'.. ? Seems like were not used
+        self.actions_one_hot = tf.one_hot(self.actions_ph, depth=self.n_actions, dtype=tf.float32)
+        self.cur_likelihood = tf.reduce_sum(tf.multiply(self.action_probs, self.actions_one_hot), axis=1)
+        self.prev_likelihood = tf.reduce_sum(tf.multiply(self.prev_action_probs, self.actions_one_hot), axis=1)
 
-        self.loss = -1. * tf.reduce_mean(
-            tf.reduce_sum(
-                tf.multiply(
-                    self.cur_action_1h, tf.div(self.policy.prob_actions, self.prev_policy)), 1) * self.advantages)
+        self.policy_loss = -1. * tf.reduce_mean(tf.divide(self.cur_likelihood, self.prev_likelihood) * \
+                                                self.advantages_ph, axis=0)
 
-        self.train_op = tf.train.AdamOptimizer().minimize(self.loss)
+        self.policy_vars = self.policy.params
 
-        # Calculating policy step !!!
+        self.kl_div = tf.reduce_mean(self.prev_action_probs * \
+                                tf.log(tf.divide(self.prev_action_probs + tiny, self.action_probs + tiny)))
+        self.entropy = -1. * tf.reduce_mean(self.action_probs * tf.log(self.action_probs + tiny))
+        self.losses = [self.policy_loss, self.kl_div, self.entropy]
 
-        var_list = [var for var in tf.trainable_variables() if self.policy.scope in var.name]
+        self.policy_grad = flat_gradients(self.policy_loss, self.policy_vars)
+        self.kl_div_first_fixed = tf.reduce_mean(tf.stop_gradient(self.action_probs) * \
+                            tf.log(tf.divide(tf.stop_gradient(self.action_probs) + tiny, self.action_probs + tiny)))
 
-        # TODO: check how this works without eval
-        def get_variables_flat_form():
-          op = tf.concat(
-              0, [tf.reshape(v, [np.prod(var_shape(v))]) for v in var_list])
-          return op.eval(session=self.sess)
-        self.get_variables_flat_form = get_variables_flat_form
+        self.kl_grads = flat_gradients(self.kl_div_first_fixed, self.policy_vars)
+        shapes = map(var_shape, self.policy_vars)
 
-        # define a function to set all trainable variables from a flat tensor theta.
-        def create_set_variables_from_flat_form_function():
-            shapes = map(var_shape, var_list)
-            total_size = sum(np.prod(shape) for shape in shapes)
-            theta_in = tf.placeholder(DTYPE, [total_size])
-            start = 0
-            assigns = []
-            for (shape, v) in zip(shapes, var_list):
-                size = np.prod(shape)
-                assigns.append(tf.assign(v, tf.reshape(theta_in[start:start + size], shape)))
-                start += size
-            op = tf.group(*assigns)
-
-            def set_variables_from_flat_form(theta):
-                return self.sess.run(op, feed_dict={theta_in: theta})
-
-            return set_variables_from_flat_form
-
-        self.set_variables_from_flat_form = create_set_variables_from_flat_form_function()
-
-        #print tf.gradients(self.loss, var_list)
-        #print [var.name for var in var_list]
-        self.policy_gradients_op = flat_gradients(self.loss, var_list)
-
-        # TODO: check why do we need stop gradient for prev_policy here
-        # TODO: check if this expression can only been used for on-policy, otherwise re-do.........
-        # TODO: this is an average of woj and tilar code...
-        self.kl_div = tf.reduce_sum(tf.stop_gradient(self.policy.prob_actions) *
-                                    tf.log(tf.div(tf.stop_gradient(self.policy.prob_actions) + TOL,
-                                                  self.policy.prob_actions + TOL))) / tf.cast(tf.shape(self.state_ph)[0], DTYPE)
-
-        kl_div_grad_op = tf.gradients(self.kl_div, var_list)
-
-        self.flat_mult = tf.placeholder(DTYPE, shape=[None])
-
-
-        # Do the actual multiplication. Some shape shifting magic.
+        self.flat_tangent = tf.placeholder(shape=[None], dtype=tf.float32)
         start = 0
-        multiplier_parts = []
-        for var in var_list:
-          shape = var_shape(var)
-          size = np.prod(shape)
-          part = tf.reshape(self.flat_mult[start:(start + size)], shape)
-          multiplier_parts.append(part)
-          start += size
+        tangents = []
+        for shape in shapes:
+            size = np.prod(shape)
+            param = tf.reshape(self.flat_tangent[start:(start + size)], shape)
+            tangents.append(param)
+            start += size
+        self.grad_vec_prod = [tf.reduce_sum(g * t) for (g, t) in zip(self.kl_grads, tangents)]
+        self.fisher_vec_prod = flat_gradients(self.grad_vec_prod, self.policy_vars)
+        self.get_flat = GetFlat(self.sess, self.policy_vars)
+        self.set_from_flat = SetFromFlat(self.sess, self.policy_vars)
 
-        product_op_list = [tf.reduce_sum(kl_derivation * multiplier) for
-                           (kl_derivation, multiplier) in zip(kl_div_grad_op, multiplier_parts)]
+        # self.policy_loss = -1. * tf.reduce_mean(tf.multiply(tf.log(self.likelihood), self.advantages_ph), axis=0)
+        #
+        # policy_grads = tf.gradients(self.policy_loss, self.policy.params)
+        # policy_grads, _ = tf.clip_by_global_norm(policy_grads, self.clip_gradients)
+        # self.policy_opt = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
+        # self.train_policy_op = self.policy_opt.apply_gradients(zip(policy_grads, self.policy.params), self.global_step)
+        #
+        # tf.summary.scalar("model/policy_loss", self.policy_loss)
+        # tf.summary.scalar("model/policy_grad_global_norm", tf.global_norm(policy_grads))
+        # tf.summary.scalar("model/policy_weights_global_norm", tf.global_norm(self.policy.params))
 
-        # Second derivation
-        self.fisher_product_op_list = flat_gradients(product_op_list, var_list)
 
+    def _optimize_policy(self, samples):
 
-    def run_episode(self):
+        cg_damping = 0.1
+        max_kl = 0.01
 
-        action_1h = np.zeros(self.env.action_space.n)
-        states, actions, rewards, action_probs, actions_one_hot = [], [], [], [], []
+        states = samples['states']
+        actions = samples['actions']
+        adv = samples['returns'] - samples['baseline']
+        action_probs = samples['action_probs']
+        feed_dict = {
+            self.policy.inp: states,
+            self.actions_ph: actions,
+            self.advantages_ph: adv,
+            self.prev_action_probs: action_probs
+        }
 
-        state = self.env.reset()
+        def fisher_vector_product(p):
+            feed_dict[self.flat_tangent] = p
+            return self.sess.run(self.fisher_vec_prod, feed_dict) + cg_damping * p
 
-        for t in itertools.count():
+        grad = self.sess.run(self.policy_grad, feed_dict=feed_dict)
+        step_direction = conjugate_gradient(fisher_vector_product, -grad)
+        shs = .5 * step_direction.dot(fisher_vector_product(step_direction))
+        step_max = np.sqrt(shs / max_kl)
+        fullstep = step_direction / step_max
+        neggdotstepdir = -grad.dot(step_direction)
 
-            action_prob = self.sess.run(self.policy.prob_actions, feed_dict={self.policy.state_ph: np.expand_dims(state, 0)})
-            action = int(cat_sample(action_prob)[0])
-            action_1h *= 0.
-            action_1h[action] = 1
 
-            states.append(state)
-            actions.append(action)
-            action_probs.append(action_prob)
-            actions_one_hot.append(action_1h)
 
-            next_state, reward, terminal, _ = self.env.step(action)
 
-            rewards.append(reward)
-            state = next_state
 
-            if t == self.max_steps or terminal:
-                path = {'states': np.concatenate(np.expand_dims(states, 0)),
-                        'actions': np.array(actions),
-                        'rewards': np.array(rewards),
-                        'action_probs': np.concatenate(action_probs),
-                        'actions_one_hot': np.concatenate(np.expand_dims(actions_one_hot, 0))}
-                return path
 
 
-    def train(self, batch_size=8, n_iter=1000):
 
-        for i in xrange(n_iter):
 
-            paths = []
-            for _ in xrange(batch_size):
-                path = self.run_episode()
-                paths.append(path)
 
-            for path in paths:
-                path['baseline'] = self.value.predict(self.sess, path['states']).reshape((-1))
-                #print path['actions_one_hot']
-                #print path['action_probs'].shape, path['actions_one_hot'].shape
-                path['returns'] = discount_rewards(path['rewards'], self.gamma)
-                path['advantages'] = path['returns'] - path['baseline']
 
-            print path['baseline'].mean(), path['baseline'].shape
-            #print path['advantages'].shape
-            #print path['returns'].shape, path['baseline'].shape
 
-            # TODO: check validation of value losses, advantages normalization (tilar)
 
-
-            advant = np.concatenate([path['advantages'] for path in paths])
-            advant -= advant.mean()
-            advant /= (advant.std() + TOL)
-
-            actions = np.concatenate([path['actions_one_hot'] for path in paths])
-
-
-            # TODO: add option for with / without bootstrapping here
-            prev_policy = np.concatenate([path['action_probs'] for path in paths])
-            for path in paths:
-                value_loss = self.value.fit(self.sess, path['states'], path['returns'])
-                #print i, value_loss
-
-
-            previous_parameters_flat = self.get_variables_flat_form()
-
-            feed_dict = {self.policy.state_ph: np.concatenate([path['states'] for path in paths]),
-                         self.state_ph: np.concatenate([path['states'] for path in paths]),
-                         self.advantages: advant,
-                         self.cur_action_1h : actions,
-                         self.prev_policy: prev_policy}
-
-
-            def fisher_vector_product(multiplier):
-                feed_dict[self.flat_mult] = multiplier
-                conjugate_gradients_damping = 0.1
-                return self.sess.run(self.fisher_product_op_list, feed_dict) + conjugate_gradients_damping * multiplier
-
-            #print path['advantages'].shape
-            policy_gradients = self.sess.run(self.policy_gradients_op, feed_dict)
-
-            step_direction = conjugate_gradient(fisher_vector_product, -policy_gradients)
-
-
-            hessian_vector_product = step_direction.dot(fisher_vector_product(step_direction))
-            max_kl = 0.01
-
-
-            # This is our \beta.
-            max_step_length = np.sqrt(2 * max_kl / hessian_vector_product)
-            max_step = max_step_length * step_direction
-
-
-            def get_loss_for(weights_flat):
-                self.set_variables_from_flat_form(weights_flat)
-                loss = self.sess.run(self.loss, feed_dict)
-                kl_divergence = self.sess.run(self.kl_div, feed_dict)
-                if kl_divergence > max_kl:
-                    logger.info("Hit the safeguard: %s", kl_divergence)
-                    return float('inf')
-                else:
-                    return loss
-
-
-            # search along the search direction.
-            new_weights = line_search(get_loss_for, previous_parameters_flat, max_step)
-
-            self.set_variables_from_flat_form(new_weights)
-
-            mean_path_len = np.mean([len(path['rewards']) for path in paths])
-            print 'mean path len: {}'.format(mean_path_len)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        #adv = samples['returns'] - samples['baseline']
+        #states = samples['states']
+        #actions = samples['actions']
+        #feed_dict = {self.policy.inp: states,
+        #             self.actions_ph: actions,
+        #             self.advantages_ph: adv}
+        summary, _, global_step, loss = self.sess.run([self.summary_op, self.train_policy_op, self.global_step,
+                                              self.policy_loss], feed_dict=feed_dict)
+        self.train_writer.add_summary(summary, global_step)
+        return loss, global_step
