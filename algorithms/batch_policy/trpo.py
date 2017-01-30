@@ -14,6 +14,10 @@ logger = logging.getLogger('__main__')
 # TODO: make profiling: if conj grad can be replaced with inverse transoformation of matrix
 # TODO: replace 2nd derivatives with another def of FIM
 # TODO: check line search algo with / without expected improvement rate
+# TODO: make loading keras model and adding name scope to name of variables if possible
+# TODO: multiprocessing sampling
+# TODO: saving checpoints
+
 
 class TRPO(BatchPolicyBase):
     """
@@ -23,7 +27,7 @@ class TRPO(BatchPolicyBase):
         1. https://arxiv.org/abs/1502.05477
         2. https://github.com/wojzaremba/trpo/blob/master/main.py
         3. https://github.com/joschu/modular_rl/blob/master/modular_rl/trpo.py
-        4. RLLAB
+        4. https://github.com/openai/rllab
 
     Limitations:
     1. Discrete action space
@@ -38,7 +42,7 @@ class TRPO(BatchPolicyBase):
 
     def _init_variables(self):
 
-        tiny = 1e-6
+        tiny = 1e-6  # for numerical stability
 
         self.action_probs = self.policy.out
         self.prev_action_probs = tf.placeholder(shape=(None, self.n_actions), dtype=tf.float32, name='actions')
@@ -75,8 +79,6 @@ class TRPO(BatchPolicyBase):
             param = tf.reshape(self.flat_tangent[start:(start + size)], shape)
             tangents.append(param)
             start += size
-        # print self.kl_grads
-        # print sum([np.prod(var_shape(x)) for x in tangents])
         self.grad_vec_prod = [tf.reduce_sum(g * t) for (g, t) in zip(self.kl_grads, tangents)]
         self.fisher_vec_prod = flat_gradients(self.grad_vec_prod, self.policy_vars)
         self.get_flat = GetFlat(self.sess, self.policy_vars)
@@ -134,7 +136,6 @@ class TRPO(BatchPolicyBase):
         # if kloldnew > 2.0 * config.max_kl:
         #     self.sff(thprev)
 
-        print loss, kl_div, entropy
         self.global_step += 1
 
         #summary, global_step = self.sess.run([self.summary_op, self.global_step], feed_dict=feed_dict)

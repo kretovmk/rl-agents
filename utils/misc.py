@@ -2,6 +2,7 @@
 import tensorflow as tf
 import numpy as np
 import csv
+import os
 
 
 def make_list(data):
@@ -29,13 +30,25 @@ def var_shape(x):
 
 
 def flat_gradients(loss, var_list):
-  grads = tf.gradients(loss, var_list)
-  return tf.concat(0, [tf.reshape(grad, [np.prod(var_shape(v))])
+    grads = tf.gradients(loss, var_list)
+    return tf.concat(0, [tf.reshape(grad, [np.prod(var_shape(v))])
                        for (v, grad) in zip(var_list, grads)])
 
 
 def write_csv(file_name, *arrays):
-  with open(file_name, 'wb') as csvfile:
-    writer = csv.writer(csvfile, delimiter=',')
-    for row in zip(*arrays):
-      writer.writerow(row)
+    with open(file_name, 'wb') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        for row in zip(*arrays):
+            writer.writerow(row)
+
+
+
+def get_saver_paths(exp_dir):
+    checkpoint_dir = os.path.join(exp_dir, "checkpoints")
+    checkpoint_path = os.path.join(checkpoint_dir, "model")
+    monitor_path = os.path.join(exp_dir, "monitor")
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
+    if not os.path.exists(monitor_path):
+        os.makedirs(monitor_path)
+    return checkpoint_dir, checkpoint_path, monitor_path

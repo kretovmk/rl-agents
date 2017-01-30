@@ -30,7 +30,7 @@ class BatchPolicyBase(object):
                  policy,
                  baseline,
                  sampler,
-                 log_dir='experiments'):
+                 monitor_path='experiments'):
         self.sess = sess
         self.gamma = gamma
         self.batch_size = batch_size
@@ -40,11 +40,11 @@ class BatchPolicyBase(object):
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
         self._init_variables()
         self.summary_op = tf.summary.merge_all()
-        self.train_writer = tf.summary.FileWriter(log_dir + '/train', sess.graph)
-        self.test_writer = tf.summary.FileWriter(log_dir + '/test', sess.graph)
+        self.train_writer = tf.summary.FileWriter(monitor_path + '/train', sess.graph)
+        self.test_writer = tf.summary.FileWriter(monitor_path + '/test', sess.graph)
         self.sess.run(tf.global_variables_initializer())
         logger.info('Agent variables initialized.')
-        logger.info('Logging directory: {}'.format(log_dir))
+        logger.info('Logging directory: {}'.format(monitor_path))
 
     def collect_samples(self):
         return self.sampler.collect_samples()
@@ -52,7 +52,7 @@ class BatchPolicyBase(object):
     def process_samples(self, samples):
         return self.sampler.process_samples(samples)
 
-    def train_agent(self, n_iter, eval_freq):
+    def train_agent(self, n_iter, eval_freq, saver=None, checkpoint_path=None):
         logger.info('Started training.')
         for i in xrange(n_iter):
             logger.info('\n\n' + '*'*40 + '\n' + 'Iteration {} \n'.format(i))
@@ -69,6 +69,9 @@ class BatchPolicyBase(object):
             start_time = time.time()
             self._optimize_policy(samples)
             logger.info('Optimized policy, took {:.2f} sec'.format(time.time() - start_time))
+
+            if saver is not None:
+                saver.save(self.sess, checkpoint_path)
 
             if n_iter % eval_freq == 0:
                 total_reward, episode_length = self.test_agent(sample=False)
