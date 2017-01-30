@@ -5,10 +5,15 @@ import numpy as np
 
 from algorithms.batch_policy.base import BatchPolicyBase
 from utils.tf_utils import flat_gradients, var_shape, SetFromFlat, GetFlat
-from utils.math import conjugate_gradient
+from utils.math import conjugate_gradient, line_search, line_search_expected_improvement
 
 logger = logging.getLogger('__main__')
 
+
+# TODO: check parameters of line search
+# TODO: make profiling: if conj grad can be replaced with inverse transoformation of matrix
+# TODO: replace 2nd derivatives with another def of FIM
+# TODO: check line search algo with / without expected improvement rate
 
 class TRPO(BatchPolicyBase):
     """
@@ -107,32 +112,30 @@ class TRPO(BatchPolicyBase):
             feed_dict[self.flat_tangent] = p
             return self.sess.run(self.fisher_vec_prod, feed_dict) + cg_damping * p
 
+        prev_params = self.get_flat()
         grad = self.sess.run(self.policy_grad, feed_dict=feed_dict)
         step_direction = conjugate_gradient(fisher_vector_product, -grad)
         shs = .5 * step_direction.dot(fisher_vector_product(step_direction))
         step_max = np.sqrt(shs / max_kl)
         fullstep = step_direction / step_max
-        neggdotstepdir = -grad.dot(step_direction)
+        #neggdotstepdir = -grad.dot(step_direction)
+
+        def loss(th):
+            self.set_from_flat(th)
+            return self.sess.run(self.losses[0], feed_dict=feed_dict)
+
+        new_params = line_search(loss, prev_params, fullstep)
+        self.set_from_flat(new_params)
+
+        loss, kl_div, entropy = self.sess.run(self.losses, feed_dict=feed_dict)
+
+        # if kloldnew > 2.0 * config.max_kl:
+        #     self.sff(thprev)
+
+        print loss, kl_div, entropy
+        self.global_step += 1
 
 
-
-
-
-
-
-
-
-
-
-
-
-        #adv = samples['returns'] - samples['baseline']
-        #states = samples['states']
-        #actions = samples['actions']
-        #feed_dict = {self.policy.inp: states,
-        #             self.actions_ph: actions,
-        #             self.advantages_ph: adv}
-        summary, _, global_step, loss = self.sess.run([self.summary_op, self.train_policy_op, self.global_step,
-                                              self.policy_loss], feed_dict=feed_dict)
+        summary, global_step = self.sess.run([self.summary_op, self.global_step], feed_dict=feed_dict)
         self.train_writer.add_summary(summary, global_step)
         return loss, global_step

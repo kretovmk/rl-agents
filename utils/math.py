@@ -30,7 +30,7 @@ def line_search(f, x, max_step):
     an improvement in f. Start with a max step and shrink it exponentially until
     there is an improvement.
     """
-    max_shrinks = 1000
+    max_shrinks = 100
     shrink_multiplier = 0.9
     fval = f(x)
     step_frac = 1.0
@@ -43,6 +43,20 @@ def line_search(f, x, max_step):
           max_shrinks -= 1
           step_frac *= shrink_multiplier
     logger.info("Can not find an improvement with line search")
+    return x
+
+def line_search_expected_improvement(f, x, fullstep, expected_improve_rate):
+    accept_ratio = .1
+    max_backtracks = 10
+    fval = f(x)
+    for (_n_backtracks, stepfrac) in enumerate(.5**np.arange(max_backtracks)):
+        xnew = x + stepfrac * fullstep
+        newfval = f(xnew)
+        actual_improve = fval - newfval
+        expected_improve = expected_improve_rate * stepfrac
+        ratio = actual_improve / expected_improve
+        if ratio > accept_ratio and actual_improve > 0:
+            return xnew
     return x
 
 
