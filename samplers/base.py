@@ -8,7 +8,6 @@ from utils.math import discount_rewards
 
 logger = logging.getLogger('__main__')
 
-# TODO: add multiprocessing
 
 class SamplerBase(object):
 
@@ -32,7 +31,6 @@ class SamplerBase(object):
                 action = np.random.choice(np.arange(len(probs)), p=probs)
             else:
                 action = np.argmax(probs)
-            #action = 0
             next_state, reward, terminal, _ = self.env.step(action)
             next_state = self.state_processor.process(self.sess, next_state)
             states.append(state)
