@@ -41,7 +41,7 @@ class TRPO(BatchPolicyBase):
         tiny = 1e-6
 
         self.action_probs = self.policy.out
-        self.prev_action_probs = tf.placeholder(shape=(None, self.n_actions), dtype=tf.int32, name='actions')
+        self.prev_action_probs = tf.placeholder(shape=(None, self.n_actions), dtype=tf.float32, name='actions')
         self.states_ph = self.policy.inp
         self.actions_ph = tf.placeholder(shape=(None,), dtype=tf.int32, name='actions')
         self.advantages_ph = tf.placeholder(shape=(None,), dtype=tf.float32, name='advantages')
@@ -64,10 +64,10 @@ class TRPO(BatchPolicyBase):
         self.kl_div_first_fixed = tf.reduce_mean(tf.stop_gradient(self.action_probs) * \
                             tf.log(tf.divide(tf.stop_gradient(self.action_probs) + tiny, self.action_probs + tiny)))
 
-        self.kl_grads = flat_gradients(self.kl_div_first_fixed, self.policy_vars)
+        self.kl_grads = tf.gradients(self.kl_div_first_fixed, self.policy_vars)
         shapes = map(var_shape, self.policy_vars)
 
-        self.flat_tangent = tf.placeholder(shape=[None], dtype=tf.float32)
+        self.flat_tangent = tf.placeholder(shape=[None], dtype=tf.float32, name='flat_tangent')
         start = 0
         tangents = []
         for shape in shapes:
@@ -75,6 +75,8 @@ class TRPO(BatchPolicyBase):
             param = tf.reshape(self.flat_tangent[start:(start + size)], shape)
             tangents.append(param)
             start += size
+        # print self.kl_grads
+        # print sum([np.prod(var_shape(x)) for x in tangents])
         self.grad_vec_prod = [tf.reduce_sum(g * t) for (g, t) in zip(self.kl_grads, tangents)]
         self.fisher_vec_prod = flat_gradients(self.grad_vec_prod, self.policy_vars)
         self.get_flat = GetFlat(self.sess, self.policy_vars)
@@ -100,7 +102,7 @@ class TRPO(BatchPolicyBase):
         states = samples['states']
         actions = samples['actions']
         adv = samples['returns'] - samples['baseline']
-        action_probs = samples['action_probs']
+        action_probs = samples['prob_actions']
         feed_dict = {
             self.policy.inp: states,
             self.actions_ph: actions,
@@ -135,7 +137,6 @@ class TRPO(BatchPolicyBase):
         print loss, kl_div, entropy
         self.global_step += 1
 
-
-        summary, global_step = self.sess.run([self.summary_op, self.global_step], feed_dict=feed_dict)
-        self.train_writer.add_summary(summary, global_step)
-        return loss, global_step
+        #summary, global_step = self.sess.run([self.summary_op, self.global_step], feed_dict=feed_dict)
+        #self.train_writer.add_summary(summary, global_step)
+        return loss, 1#, global_step

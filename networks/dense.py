@@ -13,7 +13,7 @@ class NetworkCategorialDense(NetworkBase):
         super(NetworkCategorialDense, self).__init__(scope, inp_shape, n_outputs)
 
     def _build_network(self):
-        inp = tf.placeholder(shape=(None,) + self.inp_shape, dtype=tf.float32)
+        inp = tf.placeholder(shape=(None,) + self.inp_shape, dtype=tf.float32, name='{}_input'.format(self.scope))
         targets = tf.placeholder(shape=(None, self.n_outputs), dtype=tf.float32)
 
         # tf contrib model
