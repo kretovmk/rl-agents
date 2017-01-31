@@ -12,16 +12,17 @@ from copy import copy
 logger = logging.getLogger('__main__')
 
 
-class ParallelSampler(object):
+# TODO: add copying weights from master policy to workers
 
-    def __init__(self, n_workers, samplers):
+class ParallelWorker(object):
+
+    def __init__(self, n_workers, workers):
         self.n_workers = n_workers
-        self.samplers = samplers
+        self.workers = workers
 
-    def worker_run_episode(self, sampler, lock, shared_list, shared_value, batch_size, gamma, sample):
+    def worker_run_episode(self, worker, lock, shared_list, shared_value, batch_size, gamma, sample):
         while shared_value.value < batch_size:
-            print shared_value
-            res = sampler.run_episode(gamma, sample)
+            res = worker.run_episode(gamma, sample)
             shared_list.append(res)
             with lock:
                 shared_value.value += len(res['states'])
@@ -33,9 +34,9 @@ class ParallelSampler(object):
         lock = mp.Lock()
         jobs = []
         for i in xrange(self.n_workers):
-
-            p = mp.Process(target=self.worker_run_episode, args=(self.samplers[i], lock, shared_list, shared_value,
+            p = mp.Process(target=self.worker_run_episode, args=(self.workers[i], lock, shared_list, shared_value,
                                                                  batch_size, gamma, sample))
+            p.daemon = True
             p.start()
             jobs.append(p)
         for p in jobs: p.join()

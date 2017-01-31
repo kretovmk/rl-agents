@@ -10,11 +10,11 @@ from algorithms.batch_policy.trpo import TRPO
 from baselines.universal import NetworkBaseline
 from baselines.zero import ZeroBaseline
 from networks.dense import NetworkCategorialDense, NetworkRegDense
-from samplers.parallel_sampler import ParallelSampler
-from samplers.base import SamplerBase
+from workers.parallel import ParallelWorker
+from workers.base import WorkerBase
 
 # general options
-LOAD_CHECKPOINT = True    # loading from saved checkpoint if possible
+LOAD_CHECKPOINT = False    # loading from saved checkpoint if possible
 CONCAT_LENGTH = 1  # should be >= 1 (mainly needed for concatenation Atari frames)
 ENV_NAME = 'CartPole-v0'   # gym's env name
 MAX_ENV_STEPS = 1000   # limit for max steps during episode
@@ -29,7 +29,6 @@ BATCH_SIZE = 100
 EVAL_FREQ = 1   # evaluate every N env steps
 RECORD_VIDEO_FREQ = 1000
 GAMMA = 0.9
-ADV = True
 
 
 
@@ -39,18 +38,15 @@ if __name__ == '__main__':
     logger = logging.getLogger(__name__)
     logger.setLevel(level=logging.INFO)
 
-    env = gym.make(ENV_NAME)
-    exp_folder = os.path.abspath((EXP_FOLDER + '/experiments/{}').format(env.spec.id))
+    env = lambda: gym.make(ENV_NAME)
+    exp_folder = os.path.abspath((EXP_FOLDER + '/experiments/{}').format(ENV_NAME))
     checkpoint_dir, checkpoint_path, monitor_path = get_saver_paths(exp_folder)
 
     # training
     with tf.Session() as sess:
-        policy = NetworkCategorialDense(n_hidden=(24,),
-                                        scope='policy',
-                                        inp_shape=ENV_STATE_SHAPE,
-                                        n_outputs=N_ACTIONS)
-        state_processor = EmptyProcessor()
-        baseline_approximator = NetworkRegDense(n_hidden=(64,),
+
+        state_processor = lambda: EmptyProcessor()
+        baseline_approximator = NetworkRegDense(n_hidden=(16,),
                                                 scope='baseline',
                                                 inp_shape=ENV_STATE_SHAPE,
                                                 n_outputs=1)
@@ -58,22 +54,30 @@ if __name__ == '__main__':
                                    approximator=baseline_approximator,
                                    n_epochs=5,
                                    batch_size=32)
-        baseline = ZeroBaseline()
-        samplers = []
+        #baseline = ZeroBaseline()
+        workers = []
         for i in range(N_WORKERS):
-            samplers.append(SamplerBase(sess=sess,
-                            env=env,
-                            policy=policy,
-                            state_processor=state_processor,
-                            max_steps=MAX_ENV_STEPS))
-        parallel_sampler = ParallelSampler(n_workers=N_WORKERS,
-                                           samplers=samplers)
+            worker_policy = NetworkCategorialDense(n_hidden=(16,),
+                                                   scope='worker_policy_{}'.format(i),
+                                                   inp_shape=ENV_STATE_SHAPE,
+                                                   n_outputs=N_ACTIONS)
+            workers.append(WorkerBase(sess=sess,
+                           env=env(),
+                           policy= worker_policy,
+                           state_processor=state_processor(),
+                           max_steps=MAX_ENV_STEPS))
+        parallel_worker = ParallelWorker(n_workers=N_WORKERS,
+                                          workers=workers)
+        global_policy = NetworkCategorialDense(n_hidden=(16,),
+                                               scope='policy',
+                                               inp_shape=ENV_STATE_SHAPE,
+                                               n_outputs=N_ACTIONS)
         agent = TRPO(sess=sess,
                      gamma=GAMMA,
                      batch_size=BATCH_SIZE,
-                     policy=policy,
+                     policy=global_policy,
                      baseline=baseline,
-                     sampler=parallel_sampler,
+                     sampler=parallel_worker,
                      monitor_path=monitor_path,
                      state_shape=ENV_STATE_SHAPE,
                      n_actions=N_ACTIONS)
