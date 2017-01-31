@@ -43,58 +43,52 @@ if __name__ == '__main__':
     checkpoint_dir, checkpoint_path, monitor_path = get_saver_paths(exp_folder)
 
     # training
-    with tf.Session() as sess:
+    #with tf.Session() as sess:
+    global_policy = NetworkCategorialDense(n_hidden=(16,),
+                                           scope='policy',
+                                           inp_shape=ENV_STATE_SHAPE,
+                                           n_outputs=N_ACTIONS)
+    state_processor = lambda: EmptyProcessor()
+    baseline_approximator = NetworkRegDense(n_hidden=(16,),
+                                            scope='baseline',
+                                            inp_shape=ENV_STATE_SHAPE,
+                                            n_outputs=1)
+    baseline = NetworkBaseline(sess=tf.Session(),
+                               approximator=baseline_approximator,
+                               n_epochs=5,
+                               batch_size=32)
+    #baseline = ZeroBaseline()
+    init_network = lambda x: NetworkCategorialDense(n_hidden=(16,),
+                                                    scope='worker_policy_{}'.format(x),
+                                                    inp_shape=ENV_STATE_SHAPE,
+                                                    n_outputs=N_ACTIONS)
+    parallel_worker = ParallelWorker(n_workers=N_WORKERS,
+                                     init_network=init_network,
+                                     )
 
-        state_processor = lambda: EmptyProcessor()
-        baseline_approximator = NetworkRegDense(n_hidden=(16,),
-                                                scope='baseline',
-                                                inp_shape=ENV_STATE_SHAPE,
-                                                n_outputs=1)
-        baseline = NetworkBaseline(sess=sess,
-                                   approximator=baseline_approximator,
-                                   n_epochs=5,
-                                   batch_size=32)
-        #baseline = ZeroBaseline()
-        workers = []
-        for i in range(N_WORKERS):
-            worker_policy = NetworkCategorialDense(n_hidden=(16,),
-                                                   scope='worker_policy_{}'.format(i),
-                                                   inp_shape=ENV_STATE_SHAPE,
-                                                   n_outputs=N_ACTIONS)
-            workers.append(WorkerBase(sess=sess,
-                           env=env(),
-                           policy= worker_policy,
-                           state_processor=state_processor(),
-                           max_steps=MAX_ENV_STEPS))
-        parallel_worker = ParallelWorker(n_workers=N_WORKERS,
-                                          workers=workers)
-        global_policy = NetworkCategorialDense(n_hidden=(16,),
-                                               scope='policy',
-                                               inp_shape=ENV_STATE_SHAPE,
-                                               n_outputs=N_ACTIONS)
-        agent = TRPO(sess=sess,
-                     gamma=GAMMA,
-                     batch_size=BATCH_SIZE,
-                     policy=global_policy,
-                     baseline=baseline,
-                     sampler=parallel_worker,
-                     monitor_path=monitor_path,
-                     state_shape=ENV_STATE_SHAPE,
-                     n_actions=N_ACTIONS)
+    agent = TRPO(sess=tf.Session(),
+                 gamma=GAMMA,
+                 batch_size=BATCH_SIZE,
+                 policy=global_policy,
+                 baseline=baseline,
+                 sampler=parallel_worker,
+                 monitor_path=monitor_path,
+                 state_shape=ENV_STATE_SHAPE,
+                 n_actions=N_ACTIONS)
 
-        saver = tf.train.Saver()
-        if LOAD_CHECKPOINT:
-            latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir)
-            if latest_checkpoint:
-                saver.restore(sess, latest_checkpoint)
-                logger.info('Checkpoint {} loaded using specified path.'.format(latest_checkpoint))
-            else:
-                logger.info('No checkpoints were found. Starting from scratch.')
+    saver = tf.train.Saver()
+    if LOAD_CHECKPOINT:
+        latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir)
+        if latest_checkpoint:
+            saver.restore(sess, latest_checkpoint)
+            logger.info('Checkpoint {} loaded using specified path.'.format(latest_checkpoint))
+        else:
+            logger.info('No checkpoints were found. Starting from scratch.')
 
-        agent.train_agent(n_iter=NUM_ITER,
-                          eval_freq=EVAL_FREQ,
-                          saver=saver,
-                          checkpoint_path=checkpoint_path)
+    agent.train_agent(n_iter=NUM_ITER,
+                      eval_freq=EVAL_FREQ,
+                      saver=saver,
+                      checkpoint_path=checkpoint_path)
 
 #/home/dd210/Desktop/rl-agents/tmp/tf/experiments/CartPole-v0
 

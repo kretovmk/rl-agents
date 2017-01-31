@@ -1,5 +1,5 @@
 
-import multiprocessing as mp
+import mp as mp
 import tensorflow as tf
 import numpy as np
 import itertools
@@ -14,11 +14,14 @@ logger = logging.getLogger('__main__')
 
 class ParallelSampler(object):
 
-    def __init__(self, n_workers, samplers):
+    def __init__(self, n_workers, init_network):
         self.n_workers = n_workers
-        self.samplers = samplers
+        self.init_network = init_network
 
-    def worker_run_episode(self, sampler, lock, shared_list, shared_value, batch_size, gamma, sample):
+    def collect_data(self, sampler, lock, shared_list, shared_value, batch_size, gamma, sample):
+
+
+        # TODO: add syncronization of weights for workers (samplers
         while shared_value.value < batch_size:
             print shared_value
             res = sampler.run_episode(gamma, sample)
@@ -33,8 +36,7 @@ class ParallelSampler(object):
         lock = mp.Lock()
         jobs = []
         for i in xrange(self.n_workers):
-
-            p = mp.Process(target=self.worker_run_episode, args=(self.samplers[i], lock, shared_list, shared_value,
+            p = mp.Process(target=self.collect_data, args=(self.init_network, i, lock, shared_list, shared_value,
                                                                  batch_size, gamma, sample))
             p.start()
             jobs.append(p)

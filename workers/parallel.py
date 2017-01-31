@@ -1,5 +1,5 @@
 
-import multiprocessing as mp
+import mp as mp
 import tensorflow as tf
 import numpy as np
 import itertools
@@ -16,9 +16,9 @@ logger = logging.getLogger('__main__')
 
 class ParallelWorker(object):
 
-    def __init__(self, n_workers, workers):
+    def __init__(self, n_workers, init_network):
         self.n_workers = n_workers
-        self.workers = workers
+        self.init_network = init_network
 
     def worker_run_episode(self, worker, lock, shared_list, shared_value, batch_size, gamma, sample):
         while shared_value.value < batch_size:
