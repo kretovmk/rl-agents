@@ -1,5 +1,5 @@
 
-import mp as mp
+import mpp as mp
 import tensorflow as tf
 import numpy as np
 import itertools
