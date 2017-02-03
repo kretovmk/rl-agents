@@ -13,7 +13,7 @@ from networks.dense import NetworkCategorialDense, NetworkRegDense
 from samplers.base import SamplerBase
 
 # general options
-LOAD_CHECKPOINT = True    # loading from saved checkpoint if possible
+LOAD_CHECKPOINT = False    # loading from saved checkpoint if possible
 CONCAT_LENGTH = 1  # should be >= 1 (mainly needed for concatenation Atari frames)
 ENV_NAME = 'CartPole-v0'   # gym's env name
 MAX_ENV_STEPS = 1000   # limit for max steps during episode
@@ -43,12 +43,12 @@ if __name__ == '__main__':
 
     # training
     with tf.Session() as sess:
-        policy = NetworkCategorialDense(n_hidden=(24,),
+        policy = NetworkCategorialDense(n_hidden=(16,),
                                         scope='policy',
                                         inp_shape=ENV_STATE_SHAPE,
                                         n_outputs=N_ACTIONS)
         state_processor = EmptyProcessor()
-        baseline_approximator = NetworkRegDense(n_hidden=(64,),
+        baseline_approximator = NetworkRegDense(n_hidden=(16,),
                                                 scope='baseline',
                                                 inp_shape=ENV_STATE_SHAPE,
                                                 n_outputs=1)
@@ -56,7 +56,7 @@ if __name__ == '__main__':
                                    approximator=baseline_approximator,
                                    n_epochs=5,
                                    batch_size=32)
-        baseline = ZeroBaseline()
+        #baseline = ZeroBaseline()
         sampler = SamplerBase(sess=sess,
                               env=env,
                               policy=policy,

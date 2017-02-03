@@ -40,9 +40,9 @@ class BatchPolicyBase(object):
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
         self._init_variables()
         self.summary_op = tf.summary.merge_all()
-        self.train_writer = tf.summary.FileWriter(monitor_path + '/train', sess.graph)
-        self.test_writer = tf.summary.FileWriter(monitor_path + '/test', sess.graph)
-        self.sess.run(tf.global_variables_initializer())
+        #self.train_writer = tf.summary.FileWriter(monitor_path + '/train', sess.graph)
+        #self.test_writer = tf.summary.FileWriter(monitor_path + '/test', sess.graph)
+        #self.sess.run(tf.global_variables_initializer())
         logger.info('Agent variables initialized.')
         logger.info('Logging directory: {}'.format(monitor_path))
 
