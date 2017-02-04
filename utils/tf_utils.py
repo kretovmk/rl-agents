@@ -19,8 +19,7 @@ def flat_gradients(loss, var_list):
     Same as tf.gradients but returns flat tensor.
     """
     grads = tf.gradients(loss, var_list)
-    return tf.concat(0, [tf.reshape(grad, [np.prod(var_shape(v))])
-                       for (v, grad) in zip(var_list, grads)])
+    return tf.concat(values=[tf.reshape(grad, [np.prod(var_shape(v))]) for (v, grad) in zip(var_list, grads)], axis=0)
 
 
 class SetFromFlat(object):
@@ -54,7 +53,7 @@ class GetFlat(object):
 
     def __init__(self, session, var_list):
         self.session = session
-        self.op = tf.concat(0, [tf.reshape(v, [numel(v)]) for v in var_list])
+        self.op = tf.concat(values=[tf.reshape(v, [numel(v)]) for v in var_list], axis=0)
 
     def __call__(self):
         return self.op.eval(session=self.session)

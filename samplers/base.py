@@ -65,7 +65,7 @@ class SamplerBase(object):
         returns = np.concatenate([x['returns'] for x in paths])
         return dict(states=states, actions=actions, returns=returns, prob_actions=prob_actions)
 
-    def test_agent(self, sample=False):
+    def test_agent(self, sample=False, sess=None):
         res = self.run_episode(gamma=1., sample=sample)
         total_reward = res['returns'][0]
         episode_length = len(res['returns'])

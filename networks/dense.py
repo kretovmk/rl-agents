@@ -27,7 +27,7 @@ class NetworkCategorialDense(NetworkBase):
                                                        weights_initializer=tf.contrib.layers.xavier_initializer())
 
             out = tf.nn.softmax(logits)
-            loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, targets))
+            loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=targets))
             self.inp, self.out, self.targets, self.loss = inp, out, targets, loss
             self.params = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope)
         return inp, out, targets, loss

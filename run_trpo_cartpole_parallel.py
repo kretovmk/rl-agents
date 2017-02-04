@@ -21,11 +21,11 @@ MAX_ENV_STEPS = 1000   # limit for max steps during episode
 ENV_STATE_SHAPE = (4,)   # tuple
 N_ACTIONS = 2   # int; only discrete action space
 EXP_FOLDER = '.'   # 'temp/tf/experiments'
-N_WORKERS = 2    # number of cpu workers
+N_WORKERS = 4    # number of cpu workers
 
 # training options
 NUM_ITER = 50000
-BATCH_SIZE = 100
+BATCH_SIZE = 100000
 EVAL_FREQ = 1   # evaluate every N env steps
 RECORD_VIDEO_FREQ = 1000
 GAMMA = 0.9
