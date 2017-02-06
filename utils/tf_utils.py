@@ -3,6 +3,19 @@ import tensorflow as tf
 import numpy as np
 
 
+def cluster_spec(n_workers=2, port=12333):
+    cluster = {}
+    host = '127.0.0.1'
+    cluster['ps'] = ['{}:{}'.format(host, port)]
+    port += 1
+    all_workers = []
+    for _ in range(n_workers):
+        all_workers.append('{}:{}'.format(host, port))
+        port += 1
+    cluster['worker'] = all_workers
+    return cluster
+
+
 def numel(x):
     return np.prod(var_shape(x))
 

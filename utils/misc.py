@@ -1,8 +1,22 @@
 
 import tensorflow as tf
 import numpy as np
+import subprocess
 import csv
 import os
+
+def runcmd(cmd):
+    p = subprocess.Popen(cmd, shell=True, stderr=subprocess.STDOUT, preexec_fn=os.setsid)
+    return p
+
+
+def launch_workers(n_workers):
+    processes = []
+    for i in range(0, n_workers):
+        cmd = 'python run_worker.py --task={}'.format(i)
+        print('Executing ' + cmd)
+        processes.append(runcmd(cmd))
+    return processes
 
 
 def make_list(data):
