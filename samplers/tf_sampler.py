@@ -18,6 +18,15 @@ class ParallelSampler(object):
         self.port = port
         self.state_processor = state_processor
         self.max_steps = max_steps
+        self._launch_workers()
+
+    def _launch_workers(self):
+        processes = []
+        for i in range(0, self.n_workers):
+            cmd = 'python run_sampler.py {} {} {} {}'.format(self.env_name, self.n_workers, self.port, i)
+            print('Executing ' + cmd)
+            processes.append(runcmd(cmd))
+        self.processes = processes
 
     def _collect_data(self):
         x = tf.Variable(0)
