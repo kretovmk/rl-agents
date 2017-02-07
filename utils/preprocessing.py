@@ -24,9 +24,9 @@ class EmptyProcessor(object):
     """
     Does nothing.
     """
-    def __init__(self):
-        pass
+    def __init__(self, inp_state_shape, proc_state_shape):
+        self.inp_shape = inp_state_shape
+        self.proc_shape = proc_state_shape
 
     def process(self, sess, state):
         return state
-

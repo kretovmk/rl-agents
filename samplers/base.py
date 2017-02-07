@@ -41,7 +41,7 @@ class SamplerBase(object):
             if terminal:
                 break
         returns = discount_rewards(np.array(rewards), gamma)
-        return dict(states=np.array(states),
+        return dict(states=states,
                     actions=np.array(actions),
                     rewards=np.array(rewards),
                     prob_actions=np.array(prob_actions),

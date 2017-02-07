@@ -16,7 +16,8 @@ logger = logging.getLogger('__main__')
 # TODO: check line search algo with / without expected improvement rate
 # TODO: make loading keras model and adding name scope to name of variables if possible
 # TODO: multiprocessing sampling
-# TODO: saving checpoints
+# TODO: saving checpoints + saving policy as keras model
+# TODO: add state processor to BasePolicy class
 
 
 class TRPO(BatchPolicyBase):
