@@ -2,6 +2,7 @@
 import tensorflow as tf
 import numpy as np
 import logging
+import time
 import gym
 import sys
 import os
@@ -11,7 +12,8 @@ from utils.math import discount_rewards
 from utils.tf_utils import cluster_spec
 from utils.preprocessing import EmptyProcessor
 
-logger = logging.getLogger('__main__')
+logger = logging.getLogger(__name__)
+logger.setLevel(level=logging.INFO)
 
 # TODO: do smth with importing StateProcessor -- need to be consistent between main program and workers
 # TODO: same with network
@@ -44,7 +46,7 @@ def run_episode(sess, env, gamma, state_processor, max_steps, flatten_dim):
     rewards = np.array(rewards)
     prob_actions = np.array(prob_actions)
     returns = discount_rewards(np.array(rewards), gamma)
-    res = np.concatenate((states, actions, rewards, prob_actions, returns), axis=1)
+    res = np.concatenate((states, np.expand_dims(actions, 1), np.expand_dims(rewards, 1), prob_actions, np.expand_dims(returns, 1)), axis=1)
     assert flatten_dim == res.shape[1], 'Inconsistent flatten_dim and collected data by worker.'
     return res
 
@@ -78,16 +80,20 @@ if __name__ == '__main__':
     sampled_enq_op = queue_sampled.enqueue_many(ph)
     ps_deq_op = queue_ps.dequeue()
     done_enq_op = queue_done.enqueue(1)
-    logger.debug('Worker {}, queue ops created.'.format(task))
+    logger.debug('worker {}, queue ops created.'.format(task))
 
     # creating networks
     worker_device = "/job:worker/task:{}".format(task)
     with tf.device(tf.train.replica_device_setter(1, worker_device=worker_device)):
-        with tf.variable_scope("global"):
-            policy = NetworkCategorialDense(n_hidden=(16,),
-                                            scope='policy',
-                                            inp_shape=proc_shape,
-                                            n_outputs=n_actions)
+        policy = NetworkCategorialDense(n_hidden=(16,),
+                                        scope='policy',
+                                        inp_shape=proc_shape,
+                                        n_outputs=n_actions)
+    logger.info('worker {} network built.'.format(task))
+
+    while len(sess.run(tf.report_uninitialized_variables())) > 0:
+        logger.info('worker {}:variables not initialized, sleeping.'.format(task))
+        time.sleep(1)
 
     while True:
         sess.run(ps_deq_op)

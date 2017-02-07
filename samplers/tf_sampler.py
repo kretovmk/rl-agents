@@ -36,7 +36,7 @@ class ParallelSampler(object):
 
     def _build_queue_ops(self):
         # get size
-        self.sampled_size_op = self.queue_ps.size()
+        self.sampled_size_op = self.queue_sampled.size()
         self.ps_size_op = self.queue_ps.size()
         self.done_size_op = self.queue_done.size()
         # put in queue
@@ -78,9 +78,9 @@ class ParallelSampler(object):
     def _unflatten_array(self, ar):
         # states, actions, rewards, prob_actions, returns
         d = np.array([np.prod(self.state_processor.proc_shape), 1,  1, self.n_actions, 1]).cumsum()
-        states = ar[d[0]: d[1]]
-        actions = ar[d[1]: d[:2]]
-        rewards = ar[d[2]: d[:3]]
-        prob_actions = d[d[3]: d[:4]]
-        returns = d[d[4]: d[:5]]
+        states = ar[:d[1]]
+        actions = ar[d[1]]
+        rewards = ar[d[2]: d[3]]
+        prob_actions = ar[d[3]: d[4]]
+        returns = ar[d[4]]
         return states, actions, rewards, prob_actions, returns

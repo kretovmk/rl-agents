@@ -35,7 +35,7 @@ flags.DEFINE_string('exp_folder', '.', 'folder with experiments')
 flags.DEFINE_integer('n_workers', 2, 'number of workers')
 # training
 flags.DEFINE_integer('n_iter', 2, 'number of policy iterations')
-flags.DEFINE_integer('batch_size', 1000, 'batch size policy sampling')
+flags.DEFINE_integer('batch_size', 200, 'batch size policy sampling')
 flags.DEFINE_integer('eval_freq', 1, 'frequency of evaluations')
 flags.DEFINE_float('gamma', 0.9, 'discounting factor gamma')
 flags.DEFINE_integer('baseline_epochs', 5, 'epochs when fitting baseline')
