@@ -17,8 +17,11 @@ logger.setLevel(level=logging.INFO)
 
 # TODO: do smth with importing StateProcessor -- need to be consistent between main program and workers
 # TODO: same with network
-proc_shape = (4,)
-n_actions = 2
+
+####OPTIONS
+
+proc_shape = (2,)
+n_actions = 3
 
 
 def run_episode(sess, env, gamma, state_processor, max_steps, flatten_dim):
@@ -85,7 +88,7 @@ if __name__ == '__main__':
     # creating networks
     worker_device = "/job:worker/task:{}".format(task)
     with tf.device(tf.train.replica_device_setter(1, worker_device=worker_device)):
-        policy = NetworkCategorialDense(n_hidden=(16,),
+        policy = NetworkCategorialDense(n_hidden=(32,),
                                         scope='policy',
                                         inp_shape=proc_shape,
                                         n_outputs=n_actions)

@@ -68,6 +68,7 @@ class ParallelSampler(object):
                 self.sess.run(self.ps_enq_op)
                 tasks_given += 1
             elif n_samples >= self.batch_size:
+                #print self.sess.run(self.done_size_op), tasks_given
                 if self.sess.run(self.done_size_op) == tasks_given:
                     # getting samples
                     n_samples = self.sess.run(self.sampled_size_op)
@@ -82,8 +83,9 @@ class ParallelSampler(object):
 
     def _unflatten_array(self, ar):
         # states, actions, rewards, prob_actions, returns
+        l = len(ar)
         d = np.array([np.prod(self.state_processor.proc_shape), 1,  1, self.n_actions, 1]).cumsum()
-        states = ar[:, :d[0]]
+        states = ar[:, :d[0]].reshape((l,) + self.state_processor.proc_shape)
         actions = ar[:, d[0]]
         rewards = ar[:, d[1]: d[2]]
         prob_actions = ar[:, d[2]: d[3]]
