@@ -29,13 +29,13 @@ flags = tf.flags
 flags.DEFINE_boolean('load_checkpoint', False, 'loading checkpoint')
 flags.DEFINE_string('env_name', 'CartPole-v0', 'gym environment name')
 flags.DEFINE_integer('concat_length', 1, 'concat len should be >= 1 (mainly needed for concatenation Atari frames)')
-flags.DEFINE_integer('max_env_steps', 100, 'max number of steps in environment')
+flags.DEFINE_integer('max_env_steps', 1000, 'max number of steps in environment')
 flags.DEFINE_integer('n_actions', 2, 'number of actions')
 flags.DEFINE_string('exp_folder', '.', 'folder with experiments')
-flags.DEFINE_integer('n_workers', 2, 'number of workers')
+flags.DEFINE_integer('n_workers', 1, 'number of workers')
 # training
-flags.DEFINE_integer('n_iter', 2, 'number of policy iterations')
-flags.DEFINE_integer('batch_size', 200, 'batch size policy sampling')
+flags.DEFINE_integer('n_iter', 100, 'number of policy iterations')
+flags.DEFINE_integer('batch_size', 1000, 'batch size policy sampling')
 flags.DEFINE_integer('eval_freq', 1, 'frequency of evaluations')
 flags.DEFINE_float('gamma', 0.9, 'discounting factor gamma')
 flags.DEFINE_integer('baseline_epochs', 5, 'epochs when fitting baseline')
@@ -102,15 +102,16 @@ if __name__ == '__main__':
     # launching parallel workers for sampling
     max_buf_size = FLAGS.batch_size + FLAGS.max_env_steps * FLAGS.n_workers
     parallel_sampler = ParallelSampler(sess=sess,
-                                      max_buf_size=max_buf_size,
-                                      batch_size=FLAGS.batch_size,
-                                      n_workers=FLAGS.n_workers,
-                                      port=FLAGS.port,
-                                      env_name=FLAGS.env_name,
-                                      n_actions=FLAGS.n_actions,
-                                      state_processor=STATE_PROCESSOR,
-                                      max_steps=FLAGS.max_env_steps,
-                                      gamma=FLAGS.gamma)
+                                       policy=policy,
+                                       max_buf_size=max_buf_size,
+                                       batch_size=FLAGS.batch_size,
+                                       n_workers=FLAGS.n_workers,
+                                       port=FLAGS.port,
+                                       env_name=FLAGS.env_name,
+                                       n_actions=FLAGS.n_actions,
+                                       state_processor=STATE_PROCESSOR,
+                                       max_steps=FLAGS.max_env_steps,
+                                       gamma=FLAGS.gamma)
 
     # creating agent
     agent = TRPO(sess=sess,
