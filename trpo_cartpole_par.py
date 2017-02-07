@@ -27,12 +27,12 @@ flags = tf.flags
 
 # general
 flags.DEFINE_boolean('load_checkpoint', False, 'loading checkpoint')
-flags.DEFINE_string('env', 'CartPole-v0', 'gym environment name')
+flags.DEFINE_string('env_name', 'CartPole-v0', 'gym environment name')
 flags.DEFINE_integer('concat_length', 1, 'concat len should be >= 1 (mainly needed for concatenation Atari frames)')
 flags.DEFINE_integer('max_env_steps', 100, 'max number of steps in environment')
 flags.DEFINE_integer('n_actions', 2, 'number of actions')
 flags.DEFINE_string('exp_folder', '.', 'folder with experiments')
-flags.DEFINE_integer('n_workers', 4, 'number of workers')
+flags.DEFINE_integer('n_workers', 2, 'number of workers')
 # training
 flags.DEFINE_integer('n_iter', 2, 'number of policy iterations')
 flags.DEFINE_integer('batch_size', 1000, 'batch size policy sampling')
@@ -76,7 +76,6 @@ if __name__ == '__main__':
     logger.debug('Env observation processed state shape: {}'.format(env_proc_state_shape))
 
     # checkpoint paths
-    saver = tf.train.Saver()
     exp_folder = os.path.abspath((FLAGS.exp_folder + '/experiments/{}').format(FLAGS.env_name))
     checkpoint_dir, checkpoint_path, monitor_path = get_saver_paths(exp_folder)
     logger.debug('checkpoint_dir: {}\n checkpoint_path: {}\n monitor_path: {}'\
@@ -108,8 +107,10 @@ if __name__ == '__main__':
                                       n_workers=FLAGS.n_workers,
                                       port=FLAGS.port,
                                       env_name=FLAGS.env_name,
+                                      n_actions=FLAGS.n_actions,
                                       state_processor=STATE_PROCESSOR,
-                                      max_steps=FLAGS.max_env_steps)
+                                      max_steps=FLAGS.max_env_steps,
+                                      gamma=FLAGS.gamma)
 
     # creating agent
     agent = TRPO(sess=sess,
@@ -123,6 +124,7 @@ if __name__ == '__main__':
                  n_actions=FLAGS.n_actions)
 
     # loading variables from checkpoint if applicable
+    saver = tf.train.Saver()
     if FLAGS.load_checkpoint:
         latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir)
         if latest_checkpoint:
