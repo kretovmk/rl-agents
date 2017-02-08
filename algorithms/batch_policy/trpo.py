@@ -105,7 +105,7 @@ class TRPO(BatchPolicyBase):
 
         # TODO: check normalization
         adv -= adv.mean()
-        adv /= (adv.std() + 1e-8)
+        adv /= (adv.std() + 1e-6)
 
         # full dataset -- for calculation of policy gradient
         feed_dict = {

@@ -70,16 +70,17 @@ class NetworkCategorialDenseKeras(NetworkBase):
         targets = tf.placeholder(shape=(None, self.n_outputs), dtype=tf.float32)
 
         # keras model
-        inputs = Input(shape=self.inp_shape)
-        out = inputs
-        for i, hid in enumerate(self.n_hidden):
-            out = Dense(output_dim=hid, activation='relu')(out)
-        out = Dense(output_dim=self.n_outputs)(out)
-        model = Model(input=inputs, output=out)
-        self.params = model.trainable_weights
-        logits = model(inp)
+        with tf.variable_scope(self.scope):
+            inputs = Input(shape=self.inp_shape)
+            out = inputs
+            for i, hid in enumerate(self.n_hidden):
+                out = Dense(output_dim=hid, activation='relu')(out)
+            out = Dense(output_dim=self.n_outputs)(out)
+            model = Model(input=inputs, output=out)
+            self.params = model.trainable_weights
+            logits = model(inp)
 
-        out = tf.nn.softmax(logits)
-        loss = tf.nn.softmax_cross_entropy_with_logits(logits, targets)
+            out = tf.nn.softmax(logits)
+            loss = tf.nn.softmax_cross_entropy_with_logits(logits, targets)
         return inp, out, targets, loss
 

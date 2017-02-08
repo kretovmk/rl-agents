@@ -18,19 +18,20 @@ class NetworkCategorialConvKeras(NetworkBase):
         targets = tf.placeholder(shape=(None, self.n_outputs), dtype=tf.float32)
 
         # keras model
-        inputs = Input(shape=self.inp_shape)
-        out = inputs
-        out = Convolution2D(16, 4, 4, subsample=(2, 2), activation='relu', border_mode='same', dim_ordering='th')(out)
-        out = Convolution2D(16, 4, 4, subsample=(2, 2), activation='relu', border_mode='same', dim_ordering='th')(out)
-        out = Flatten()(out)
-        out = Dense(64, activation='relu')(out)
-        out = Dense(output_dim=self.n_outputs)(out)
-        model = Model(input=inputs, output=out)
-        logits = model(inp)
-        out = tf.nn.softmax(logits)
-        loss = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=targets)
-        self.inp, self.out, self.targets, self.loss = inp, out, targets, loss
-        self.params = model.trainable_weights
+        with tf.variable_scope(self.scope):
+            inputs = Input(shape=self.inp_shape)
+            out = inputs
+            out = Convolution2D(16, 4, 4, subsample=(2, 2), activation='relu', border_mode='same', dim_ordering='th')(out)
+            out = Convolution2D(16, 4, 4, subsample=(2, 2), activation='relu', border_mode='same', dim_ordering='th')(out)
+            out = Flatten()(out)
+            out = Dense(64, activation='relu')(out)
+            out = Dense(output_dim=self.n_outputs)(out)
+            model = Model(input=inputs, output=out)
+            logits = model(inp)
+            out = tf.nn.softmax(logits)
+            loss = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=targets)
+            self.inp, self.out, self.targets, self.loss = inp, out, targets, loss
+            self.params = model.trainable_weights
         return inp, out, targets, loss
 
 
@@ -44,18 +45,19 @@ class NetworkRegConvKeras(NetworkBase):
         targets = tf.placeholder(shape=(None, self.n_outputs), dtype=tf.float32)
 
         # keras model
-        inputs = Input(shape=self.inp_shape)
-        out = inputs
-        out = Convolution2D(16, 4, 4, subsample=(2, 2), activation='relu', border_mode='same', dim_ordering='th')(out)
-        out = Convolution2D(16, 4, 4, subsample=(2, 2), activation='relu', border_mode='same', dim_ordering='th')(out)
-        out = Flatten()(out)
-        out = Dense(64, activation='relu')(out)
-        out = Dense(output_dim=self.n_outputs)(out)
-        model = Model(input=inputs, output=out)
-        out = model(inp)
-        loss = tf.reduce_mean(tf.squared_difference(out, targets))
-        self.inp, self.out, self.targets, self.loss = inp, out, targets, loss
-        self.params = model.trainable_weights
+        with tf.variable_scope(self.scope):
+            inputs = Input(shape=self.inp_shape)
+            out = inputs
+            out = Convolution2D(16, 4, 4, subsample=(2, 2), activation='relu', border_mode='same', dim_ordering='th')(out)
+            out = Convolution2D(16, 4, 4, subsample=(2, 2), activation='relu', border_mode='same', dim_ordering='th')(out)
+            out = Flatten()(out)
+            out = Dense(64, activation='relu')(out)
+            out = Dense(output_dim=self.n_outputs)(out)
+            model = Model(input=inputs, output=out)
+            out = model(inp)
+            loss = tf.reduce_mean(tf.squared_difference(out, targets))
+            self.inp, self.out, self.targets, self.loss = inp, out, targets, loss
+            self.params = model.trainable_weights
 
         return inp, out, targets, loss
 
