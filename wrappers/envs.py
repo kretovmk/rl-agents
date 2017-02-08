@@ -7,7 +7,7 @@ from gym.spaces.box import Box
 
 
 def _process_frame(frame):
-    frame = cv2.resize(frame, (84, 84))
+    frame = cv2.resize(frame, (105, 80))
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
     return frame
 
@@ -15,7 +15,7 @@ class AtariStackFrames(object):
     def __init__(self, env, n_frames=4):
         self.env = env
         self.action_space = self.env.action_space
-        self.observation_space = Box(0, 255, [n_frames, 84, 84])
+        self.observation_space = Box(0, 255, [n_frames, 105, 80])
         self.n_frames = n_frames
         self._checkpoint_buffer = []
         self.buffer = deque(maxlen=n_frames)

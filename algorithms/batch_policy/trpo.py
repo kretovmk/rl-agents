@@ -103,6 +103,10 @@ class TRPO(BatchPolicyBase):
         adv = samples['returns'] - samples['baseline']
         action_probs = samples['prob_actions']
 
+        # TODO: check normalization
+        adv -= adv.mean()
+        adv /= (adv.std() + 1e-8)
+
         # full dataset -- for calculation of policy gradient
         feed_dict = {
             self.entropy_coeff_ph: self.entropy_coeff,
