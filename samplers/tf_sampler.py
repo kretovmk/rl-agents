@@ -6,6 +6,7 @@ import gym
 import os
 
 from utils.math import discount_rewards
+from wrappers.envs import AtariStackFrames
 from utils.misc import runcmd
 
 logger = logging.getLogger('__main__')
@@ -25,7 +26,9 @@ class ParallelSampler(object):
         self.state_processor = state_processor
         self.max_steps = max_steps
         self.gamma = gamma
-        self.env = gym.make(env_name)
+        self.env =  gym.make(env_name)
+        self.env = AtariStackFrames(self.env)
+
         # creating queues
         flatten_dim = np.prod(state_processor.proc_shape) + 1 + 1 + n_actions + 1  # states, act, rew, prob_act, ret
         with tf.device('job:ps/task:0'):

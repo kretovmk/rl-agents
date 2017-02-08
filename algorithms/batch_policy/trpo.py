@@ -55,14 +55,15 @@ class TRPO(BatchPolicyBase):
         self.cur_likelihood = tf.reduce_sum(tf.multiply(self.action_probs, self.actions_one_hot), axis=1)
         self.prev_likelihood = tf.reduce_sum(tf.multiply(self.prev_action_probs, self.actions_one_hot), axis=1)
 
+        self.entropy = -1. * tf.reduce_mean(self.action_probs * tf.log(self.action_probs + tiny))
+
         self.policy_loss = -1. * tf.reduce_mean(tf.divide(self.cur_likelihood, self.prev_likelihood) * \
-                                                self.advantages_ph, axis=0)
+                                                self.advantages_ph, axis=0) - self.entropy*0.001  # TODO: replace w ph
 
         self.policy_vars = self.policy.params
 
         self.kl_div = tf.reduce_mean(self.prev_action_probs * \
                                 tf.log(tf.divide(self.prev_action_probs + tiny, self.action_probs + tiny)))
-        self.entropy = -1. * tf.reduce_mean(self.action_probs * tf.log(self.action_probs + tiny))
         self.losses = [self.policy_loss, self.kl_div, self.entropy]
 
         self.policy_grad = flat_gradients(self.policy_loss, self.policy_vars)
