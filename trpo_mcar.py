@@ -27,12 +27,13 @@ flags = tf.flags
 
 # general
 flags.DEFINE_boolean('load_checkpoint', False, 'loading checkpoint')
-flags.DEFINE_string('env_name', 'MountainCar-v0', 'gym environment name')
-#flags.DEFINE_integer('concat_length', 1, 'concat len should be >= 1 (mainly needed for concatenation Atari frames)') # TODO: fix
+flags.DEFINE_string('env_name', 'CartPole-v0', 'gym environment name')
+flags.DEFINE_boolean('atari_wrapper', False, 'gym environment name')
 flags.DEFINE_integer('max_env_steps', 1000, 'max number of steps in environment')
-flags.DEFINE_integer('n_actions', 3, 'number of actions')
+flags.DEFINE_integer('n_actions', 2, 'number of actions')
 flags.DEFINE_string('exp_folder', '.', 'folder with experiments')
-flags.DEFINE_integer('n_workers', 4, 'number of workers')
+flags.DEFINE_integer('n_workers', 2, 'number of workers')
+flags.DEFINE_float('subsampling', 0.2, 'subsampling for appr calc of 2nd derivatives')
 # training
 flags.DEFINE_integer('n_iter', 1000, 'number of policy iterations')
 flags.DEFINE_integer('batch_size', 100000, 'batch size policy sampling')
@@ -122,7 +123,8 @@ if __name__ == '__main__':
                  sampler=parallel_sampler,
                  monitor_path=monitor_path,
                  state_shape=STATE_PROCESSOR.proc_shape,
-                 n_actions=FLAGS.n_actions)
+                 n_actions=FLAGS.n_actions,
+                 subsampling=FLAGS.subsampling)
 
     # loading variables from checkpoint if applicable
     saver = tf.train.Saver()

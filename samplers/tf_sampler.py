@@ -14,7 +14,8 @@ logger = logging.getLogger('__main__')
 
 class ParallelSampler(object):
 
-    def __init__(self, sess, policy, max_buf_size, batch_size, n_workers, port, env_name, n_actions, state_processor, max_steps, gamma):
+    def __init__(self, sess, policy, max_buf_size, batch_size, n_workers, port, env_name, n_actions, state_processor,
+                 max_steps, gamma, atari_wrapper):
         self.sess = sess
         self.policy = policy
         self.max_buf_size = max_buf_size
@@ -27,7 +28,8 @@ class ParallelSampler(object):
         self.max_steps = max_steps
         self.gamma = gamma
         self.env =  gym.make(env_name)
-        self.env = AtariStackFrames(self.env)
+        if atari_wrapper:
+            self.env = AtariStackFrames(self.env)
 
         # creating queues
         flatten_dim = np.prod(state_processor.proc_shape) + 1 + 1 + n_actions + 1  # states, act, rew, prob_act, ret

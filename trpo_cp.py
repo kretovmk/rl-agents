@@ -10,11 +10,9 @@ from utils.preprocessing import EmptyProcessor
 from algorithms.batch_policy.trpo import TRPO
 from baselines.universal import NetworkBaseline
 from baselines.zero import ZeroBaseline
-#from networks.dense import NetworkCategorialDense, NetworkRegDense
-from networks.conv import NetworkCategorialConvKeras, NetworkRegConvKeras
+from networks.dense import NetworkCategorialDense, NetworkRegDense
 from samplers.tf_sampler import ParallelSampler
 from utils.tf_utils import cluster_spec
-from wrappers.envs import AtariStackFrames
 
 """
 General structure of cluster:
@@ -29,27 +27,27 @@ flags = tf.flags
 
 # general
 flags.DEFINE_boolean('load_checkpoint', False, 'loading checkpoint')
-flags.DEFINE_string('env_name', 'MsPacman-v0', 'gym environment name')
-#flags.DEFINE_integer('concat_length', 1, 'concat len should be >= 1 (mainly needed for concatenation Atari frames)') # TODO: fix
-flags.DEFINE_integer('max_env_steps', 5000, 'max number of steps in environment')
-flags.DEFINE_integer('n_actions', 9, 'number of actions')
+flags.DEFINE_string('env_name', 'CartPole-v0', 'gym environment name')
+flags.DEFINE_boolean('atari_wrapper', False, 'gym environment name')
+flags.DEFINE_integer('max_env_steps', 1000, 'max number of steps in environment')
+flags.DEFINE_integer('n_actions', 2, 'number of actions')
 flags.DEFINE_string('exp_folder', '.', 'folder with experiments')
-flags.DEFINE_integer('n_workers', 4, 'number of workers')
+flags.DEFINE_integer('n_workers', 2, 'number of workers')
+flags.DEFINE_float('subsampling', 0.1, 'subsampling for appr calc of 2nd derivatives')
 # training
 flags.DEFINE_integer('n_iter', 1000, 'number of policy iterations')
-flags.DEFINE_integer('batch_size', 100000, 'batch size policy sampling')
+flags.DEFINE_integer('batch_size', 1000, 'batch size policy sampling')
 flags.DEFINE_integer('eval_freq', 1, 'frequency of evaluations')
-flags.DEFINE_float('gamma', 0.99, 'discounting factor gamma')
-flags.DEFINE_integer('baseline_epochs', 2, 'epochs when fitting baseline')
-flags.DEFINE_float('baseline_batch_size', 128, 'batch size for fitting baseline')
+flags.DEFINE_float('gamma', 0.9, 'discounting factor gamma')
+flags.DEFINE_integer('baseline_epochs', 3, 'epochs when fitting baseline')
+flags.DEFINE_float('baseline_batch_size', 32, 'batch size for fitting baseline')
 # technical
 flags.DEFINE_integer('port', 15100, 'starting port')
-flags.DEFINE_integer('task', 0, 'number of task')
 
 FLAGS = flags.FLAGS
 
-env_proc_state_shape = (4, 84, 84)
-env_inp_state_shape = (4, 84, 84)
+env_proc_state_shape = (4,)
+env_inp_state_shape = (4,)
 logging_level = logging.INFO
 STATE_PROCESSOR = EmptyProcessor(inp_state_shape=env_inp_state_shape,
                                  proc_state_shape=env_proc_state_shape)
@@ -73,7 +71,6 @@ if __name__ == '__main__':
 
     # environment
     env = gym.make(FLAGS.env_name)
-    env = AtariStackFrames(env)
     env_inp_state_shape = env.observation_space.shape
     logger.debug('Env observation original state shape: {}'.format(env_inp_state_shape))
     logger.debug('Env observation processed state shape: {}'.format(env_proc_state_shape))
@@ -88,12 +85,14 @@ if __name__ == '__main__':
     sess = tf.Session(server.target)
     worker_device = 'job:ps/task:0'
     with tf.device(tf.train.replica_device_setter(1, worker_device=worker_device)):
-        policy = NetworkCategorialConvKeras(scope='policy',
-                                            inp_shape=STATE_PROCESSOR.proc_shape,
-                                            n_outputs=FLAGS.n_actions)
-        baseline_approximator = NetworkRegConvKeras(scope='baseline',
-                                                    inp_shape=STATE_PROCESSOR.proc_shape,
-                                                    n_outputs=1)
+        policy = NetworkCategorialDense(n_hidden=(32,),
+                                        scope='policy',
+                                        inp_shape=STATE_PROCESSOR.proc_shape,
+                                        n_outputs=FLAGS.n_actions)
+        baseline_approximator = NetworkRegDense(n_hidden=(32,),
+                                                scope='baseline',
+                                                inp_shape=STATE_PROCESSOR.proc_shape,
+                                                n_outputs=1)
         baseline = NetworkBaseline(sess=sess,
                                    approximator=baseline_approximator,
                                    n_epochs=FLAGS.baseline_epochs,
@@ -112,7 +111,8 @@ if __name__ == '__main__':
                                        n_actions=FLAGS.n_actions,
                                        state_processor=STATE_PROCESSOR,
                                        max_steps=FLAGS.max_env_steps,
-                                       gamma=FLAGS.gamma)
+                                       gamma=FLAGS.gamma,
+                                       atari_wrapper=FLAGS.atari_wrapper)
 
     # creating agent
     agent = TRPO(sess=sess,
@@ -123,7 +123,8 @@ if __name__ == '__main__':
                  sampler=parallel_sampler,
                  monitor_path=monitor_path,
                  state_shape=STATE_PROCESSOR.proc_shape,
-                 n_actions=FLAGS.n_actions)
+                 n_actions=FLAGS.n_actions,
+                 subsampling=FLAGS.subsampling)
 
     # loading variables from checkpoint if applicable
     saver = tf.train.Saver()

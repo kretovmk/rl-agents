@@ -10,14 +10,12 @@ from utils.math import conjugate_gradient, line_search, line_search_expected_imp
 logger = logging.getLogger('__main__')
 
 
-# TODO: check parameters of line search
+# TODO: check parameters of line search -- now 0.5.. replace with 0.9?
 # TODO: make profiling: if conj grad can be replaced with inverse transoformation of matrix
 # TODO: replace 2nd derivatives with another def of FIM
 # TODO: check line search algo with / without expected improvement rate
 # TODO: make loading keras model and adding name scope to name of variables if possible
-# TODO: multiprocessing sampling
 # TODO: saving checpoints + saving policy as keras model
-# TODO: add state processor to BasePolicy class
 
 
 class TRPO(BatchPolicyBase):
@@ -32,11 +30,14 @@ class TRPO(BatchPolicyBase):
 
     Limitations:
     1. Discrete action space
-    2. Episodic tasks (but may work with non-episodic, like CartPole ).
+    2. Episodic tasks (but may work with non-episodic, like CartPole).
     """
-    def __init__(self, state_shape, n_actions, learning_rate=0.001, clip_gradients=10., *args, **kwargs):
+    def __init__(self, state_shape, n_actions, learning_rate=0.001, entropy_coeff=0.001, subsampling=0.1,
+                 clip_gradients=10., *args, **kwargs):
         self.state_shape = state_shape
         self.n_actions = n_actions
+        self.entropy_coeff = entropy_coeff
+        self.subsampling = subsampling
         self.clip_gradients = clip_gradients
         self.learning_rate = learning_rate
         super(TRPO, self).__init__(*args, **kwargs)
@@ -46,6 +47,7 @@ class TRPO(BatchPolicyBase):
         tiny = 1e-6  # for numerical stability
 
         self.action_probs = self.policy.out
+        self.entropy_coeff_ph = tf.placeholder(shape=(), dtype=tf.float32, name='entropy_coeff')
         self.prev_action_probs = tf.placeholder(shape=(None, self.n_actions), dtype=tf.float32, name='actions')
         self.states_ph = self.policy.inp
         self.actions_ph = tf.placeholder(shape=(None,), dtype=tf.int32, name='actions')
@@ -57,8 +59,8 @@ class TRPO(BatchPolicyBase):
 
         self.entropy = -1. * tf.reduce_mean(self.action_probs * tf.log(self.action_probs + tiny))
 
-        self.policy_loss = -1. * tf.reduce_mean(tf.divide(self.cur_likelihood, self.prev_likelihood) * \
-                                                self.advantages_ph, axis=0) - self.entropy*0.001  # TODO: replace w ph
+        self.policy_loss = -1. * tf.reduce_mean(tf.divide(self.cur_likelihood, self.prev_likelihood) *
+                                                self.advantages_ph, axis=0) - self.entropy * self.entropy_coeff_ph
 
         self.policy_vars = self.policy.params
 
@@ -86,20 +88,13 @@ class TRPO(BatchPolicyBase):
         self.get_flat = GetFlat(self.sess, self.policy_vars)
         self.set_from_flat = SetFromFlat(self.sess, self.policy_vars)
 
-        # self.policy_loss = -1. * tf.reduce_mean(tf.multiply(tf.log(self.likelihood), self.advantages_ph), axis=0)
-        #
-        # policy_grads = tf.gradients(self.policy_loss, self.policy.params)
-        # policy_grads, _ = tf.clip_by_global_norm(policy_grads, self.clip_gradients)
-        # self.policy_opt = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
-        # self.train_policy_op = self.policy_opt.apply_gradients(zip(policy_grads, self.policy.params), self.global_step)
-        #
-        # tf.summary.scalar("model/policy_loss", self.policy_loss)
-        # tf.summary.scalar("model/policy_grad_global_norm", tf.global_norm(policy_grads))
-        # tf.summary.scalar("model/policy_weights_global_norm", tf.global_norm(self.policy.params))
+        tf.summary.scalar("model/policy_loss", self.policy_loss)
+        tf.summary.scalar("model/policy_grad_global_norm", tf.global_norm([self.policy_grad]))
+        tf.summary.scalar("model/policy_weights_global_norm", tf.global_norm(self.policy.params))
+        tf.summary.scalar("model/policy_entropy", tf.global_norm([self.entropy]))
 
 
     def _optimize_policy(self, samples):
-
         cg_damping = 0.1
         max_kl = 0.01
 
@@ -107,39 +102,56 @@ class TRPO(BatchPolicyBase):
         actions = samples['actions']
         adv = samples['returns'] - samples['baseline']
         action_probs = samples['prob_actions']
+
+        # full dataset -- for calculation of policy gradient
         feed_dict = {
+            self.entropy_coeff_ph: self.entropy_coeff,
             self.policy.inp: states,
             self.actions_ph: actions,
             self.advantages_ph: adv,
             self.prev_action_probs: action_probs
         }
 
+        # subsampled dataset -- for approximate calculation of gradient step direction
+        n_samples = int(len(states) * self.subsampling)
+        ix_samples = np.random.choice(range(n_samples), size=n_samples, replace=False)
+        feed_dict_ss = {
+            self.entropy_coeff_ph: self.entropy_coeff,
+            self.policy.inp: states[ix_samples],
+            self.actions_ph: actions[ix_samples],
+            self.advantages_ph: adv[ix_samples],
+            self.prev_action_probs: action_probs[ix_samples]
+        }
+
+        # calc on the basis of subsampled
         def fisher_vector_product(p):
-            feed_dict[self.flat_tangent] = p
-            return self.sess.run(self.fisher_vec_prod, feed_dict) + cg_damping * p
+            feed_dict_ss[self.flat_tangent] = p
+            return self.sess.run(self.fisher_vec_prod, feed_dict_ss) + cg_damping * p
 
         prev_params = self.get_flat()
+        # accurate calc of gradient
         grad = self.sess.run(self.policy_grad, feed_dict=feed_dict)
+        # approximate calc of step direction
         step_direction = conjugate_gradient(fisher_vector_product, -grad)
-        shs = .5 * step_direction.dot(fisher_vector_product(step_direction))
+        shs = 0.5 * step_direction.dot(fisher_vector_product(step_direction))
         step_max = np.sqrt(shs / max_kl)
         fullstep = step_direction / step_max
-        #neggdotstepdir = -grad.dot(step_direction)
+        neggdotstepdir = -grad.dot(step_direction)
 
         def loss(th):
             self.set_from_flat(th)
             return self.sess.run(self.losses[0], feed_dict=feed_dict)
 
-        new_params = line_search(loss, prev_params, fullstep)
+        new_params = line_search_expected_improvement(loss, prev_params, fullstep, neggdotstepdir / step_max)
         self.set_from_flat(new_params)
 
-        loss, kl_div, entropy = self.sess.run(self.losses, feed_dict=feed_dict)
+        # approximate calculation of loss, kl_div, entropy
+        loss, kl_div, entropy = self.sess.run(self.losses, feed_dict=feed_dict_ss)
+        if kl_div > 2.0 * max_kl:
+            self.set_from_flat(prev_params)
+            logger.info('New parameters caused too big KL divergence: {:.4f}; backed up to old parameters'\
+                        .format(kl_div))
 
-        # if kloldnew > 2.0 * config.max_kl:
-        #     self.sff(thprev)
-
-        self.global_step += 1
-
-        #summary, global_step = self.sess.run([self.summary_op, self.global_step], feed_dict=feed_dict)
-        #self.train_writer.add_summary(summary, global_step)
-        return loss, 1#, global_step
+        summary, global_step = self.sess.run([self.summary_op, self.global_step], feed_dict=feed_dict)
+        self.train_writer.add_summary(summary, global_step)
+        return loss, global_step

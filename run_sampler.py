@@ -7,7 +7,7 @@ import gym
 import sys
 import os
 
-#from networks.dense import NetworkCategorialDense
+from networks.dense import NetworkCategorialDense
 from networks.conv import NetworkCategorialConvKeras
 from utils.math import discount_rewards
 from utils.tf_utils import cluster_spec
@@ -17,13 +17,44 @@ from wrappers.envs import AtariStackFrames
 logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.INFO)
 
-# TODO: do smth with importing StateProcessor -- need to be consistent between main program and workers
-# TODO: same with network
 
-####OPTIONS
+####################---OPTIONS Atari---################################
+# inp_shape = (210, 160, 3)
+# proc_shape = (4, 84, 84)
+# n_actions = 9
+# STATE_PROCESSOR = EmptyProcessor(inp_state_shape=inp_shape,
+#                                  proc_state_shape=proc_shape)
+# POLICY = NetworkCategorialConvKeras(scope='policy',
+#                                     inp_shape=STATE_PROCESSOR.proc_shape,
+#                                     n_outputs=n_actions)
+# ATARI_WRAPPER = True
+#######################################################################
 
-proc_shape = (4, 84, 84)
-n_actions = 9
+####################---OPTIONS Mountain car---#########################
+# inp_shape = (2,)
+# proc_shape = (2,)
+# n_actions = 3
+# STATE_PROCESSOR = EmptyProcessor(inp_state_shape=inp_shape,
+#                                  proc_state_shape=proc_shape)
+# POLICY = NetworkCategorialDense(n_hidden=(32,),
+#                                 scope='policy',
+#                                 inp_shape=STATE_PROCESSOR.proc_shape,
+#                                 n_outputs=n_actions)
+# ATARI_WRAPPER = False
+#######################################################################
+
+###################---OPTIONS Cartpole---#############################
+inp_shape = (4,)
+proc_shape = (4,)
+n_actions = 2
+STATE_PROCESSOR = EmptyProcessor(inp_state_shape=inp_shape,
+                                 proc_state_shape=proc_shape)
+POLICY = NetworkCategorialDense(n_hidden=(32,),
+                                scope='policy',
+                                inp_shape=STATE_PROCESSOR.proc_shape,
+                                n_outputs=n_actions)
+ATARI_WRAPPER = False
+#######################################################################
 
 
 def run_episode(sess, env, gamma, state_processor, max_steps, flatten_dim):
@@ -64,9 +95,9 @@ if __name__ == '__main__':
     n_workers, max_buf_size, max_steps, port, task = [int(x) for x in sys.argv[3:]]
     spec = tf.train.ClusterSpec(cluster_spec(n_workers, port))
     env = gym.make(env_name)
-    env = AtariStackFrames(env)
-    state_processor = EmptyProcessor(inp_state_shape=env.observation_space.shape,
-                                     proc_state_shape=env.observation_space.shape)
+    if ATARI_WRAPPER:
+        env = AtariStackFrames(env)
+    state_processor = STATE_PROCESSOR
 
     # launching worker
     server = tf.train.Server(spec, job_name='worker', task_index=task)
@@ -91,9 +122,7 @@ if __name__ == '__main__':
     # creating networks
     worker_device = "/job:worker/task:{}".format(task)
     with tf.device(tf.train.replica_device_setter(1, worker_device=worker_device)):
-        policy = NetworkCategorialConvKeras(scope='policy',
-                                            inp_shape=state_processor.proc_shape,
-                                            n_outputs=n_actions)
+        policy = POLICY
     logger.info('worker {} network built.'.format(task))
 
     while len(sess.run(tf.report_uninitialized_variables())) > 0:

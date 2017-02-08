@@ -14,7 +14,7 @@ from rllab.misc.instrument import stub, run_experiment_lite
 
 #stub(globals())
 
-env = TfEnv(GymEnv('CartPole-v0'))
+env = TfEnv(GymEnv('MountainCar-v0'))
 
 policy = CategoricalMLPPolicy(
     name="policy",
@@ -23,17 +23,17 @@ policy = CategoricalMLPPolicy(
     hidden_sizes=(32,)
 )
 
-#baseline = LinearFeatureBaseline(env_spec=env.spec)
-baseline = ZeroBaseline(env_spec=env.spec)
+baseline = LinearFeatureBaseline(env_spec=env.spec)
+#baseline = ZeroBaseline(env_spec=env.spec)
 
 algo = TRPO(
     env=env,
     policy=policy,
     baseline=baseline,
-    batch_size=100,
+    batch_size=256000,
     max_path_length=1000,
     n_itr=100,
-    discount=0.9,
+    discount=0.99,
     step_size=0.01,
     # optimizer=ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5))
 

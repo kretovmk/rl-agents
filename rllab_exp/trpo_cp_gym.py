@@ -14,13 +14,13 @@ from rllab.misc.instrument import stub, run_experiment_lite
 
 #stub(globals())
 
-env = TfEnv(GymEnv('MountainCar-v0'))
+env = TfEnv(GymEnv('CartPole-v0'))
 
 policy = CategoricalMLPPolicy(
     name="policy",
     env_spec=env.spec,
     # The neural network policy should have two hidden layers, each with 32 hidden units.
-    hidden_sizes=(32, 32)
+    hidden_sizes=(16,)
 )
 
 baseline = LinearFeatureBaseline(env_spec=env.spec)
@@ -30,10 +30,10 @@ algo = TRPO(
     env=env,
     policy=policy,
     baseline=baseline,
-    batch_size=256000,
+    batch_size=1000,
     max_path_length=1000,
     n_itr=100,
-    discount=0.99,
+    discount=0.9,
     step_size=0.01,
     # optimizer=ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5))
 
