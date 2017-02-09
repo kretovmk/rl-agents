@@ -54,6 +54,7 @@ class AEConvKeras(object):
     def _build_network(self):
 
         inp = Input(shape=self.inp_shape)
+        print self.inp_shape
 
         x = Convolution2D(16, 4, 4, subsample=(2, 2), activation='relu', border_mode='same', dim_ordering='th')(inp)
         x = Convolution2D(16, 4, 4, subsample=(2, 2), activation='relu', border_mode='same', dim_ordering='th')(x)
@@ -65,7 +66,7 @@ class AEConvKeras(object):
         x = UpSampling2D((2, 2), dim_ordering='th')(x)
         x = Convolution2D(16, 4, 4, activation='relu', border_mode='same', dim_ordering='th')(x)
         x = UpSampling2D((2, 2), dim_ordering='th')(x)
-        decoded = Convolution2D(4, 4, 4, activation='sigmoid', border_mode='same', dim_ordering='th')(x)
+        decoded = Convolution2D(12, 4, 4, activation='sigmoid', border_mode='same', dim_ordering='th')(x)
 
         autoencoder = Model(input=inp, output=decoded)
         encoder = Model(input=inp, output=encoded)
