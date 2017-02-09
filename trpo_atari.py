@@ -1,6 +1,7 @@
 
 import os
 import gym
+import keras
 import signal
 import logging
 import tensorflow as tf
@@ -10,7 +11,8 @@ from utils.preprocessing import EmptyProcessor
 from algorithms.batch_policy.trpo import TRPO
 from baselines.universal import NetworkBaseline
 from baselines.zero import ZeroBaseline
-#from networks.dense import NetworkCategorialDense, NetworkRegDense
+from networks.dense import NetworkCategorialDense, NetworkRegDense
+from networks.conv2 import NetworkCategorialConvKerasPretrained, NetworkRegConvKerasPretrained
 from networks.conv import NetworkCategorialConvKeras, NetworkRegConvKeras
 from samplers.tf_sampler import ParallelSampler
 from utils.tf_utils import cluster_spec
@@ -34,7 +36,7 @@ flags.DEFINE_boolean('atari_wrapper', True, 'gym environment name')
 flags.DEFINE_integer('max_env_steps', 10000, 'max number of steps in environment')
 flags.DEFINE_integer('n_actions', 9, 'number of actions')
 flags.DEFINE_string('exp_folder', '.', 'folder with experiments')
-flags.DEFINE_integer('n_workers', 4, 'number of workers')
+flags.DEFINE_integer('n_workers', 2, 'number of workers')
 flags.DEFINE_float('subsampling', 0.1, 'subsampling for appr calc of 2nd derivatives')
 # training
 flags.DEFINE_integer('n_iter', 1000, 'number of policy iterations')
@@ -54,6 +56,8 @@ env_inp_state_shape = (4, 105, 80)
 logging_level = logging.INFO
 STATE_PROCESSOR = EmptyProcessor(inp_state_shape=env_inp_state_shape,
                                  proc_state_shape=env_proc_state_shape)
+
+fn = 'model_epoch99.h5'
 
 ###########################--OPTIONS END--###########################
 #####################################################################
@@ -88,13 +92,23 @@ if __name__ == '__main__':
     # initializing session and components
     sess = tf.Session(server.target)
     worker_device = 'job:ps/task:0'
+
+    keras.backend.set_session(sess)
+
+    # pretrained_policy = keras.models.load_model(fn)
+    # pol_inp, pol_out = pretrained_policy.input, pretrained_policy.output
+    # pretrained_value = keras.models.load_model(fn)
+    # val_inp, val_out = pretrained_value.input, pretrained_value.output
+
     with tf.device(tf.train.replica_device_setter(1, worker_device=worker_device)):
-        policy = NetworkCategorialConvKeras(scope='policy',
-                                            inp_shape=STATE_PROCESSOR.proc_shape,
-                                            n_outputs=FLAGS.n_actions)
-        baseline_approximator = NetworkRegConvKeras(scope='baseline',
-                                                    inp_shape=STATE_PROCESSOR.proc_shape,
-                                                    n_outputs=1)
+        policy = NetworkCategorialConvKerasPretrained('policy',
+                                                      inp_shape=STATE_PROCESSOR.proc_shape,
+                                                      n_outputs=FLAGS.n_actions,
+                                                      fn=fn)
+        baseline_approximator = NetworkRegConvKerasPretrained('baseline',
+                                                              inp_shape=STATE_PROCESSOR.proc_shape,
+                                                              n_outputs=1,
+                                                              fn=fn)
         baseline = NetworkBaseline(sess=sess,
                                    approximator=baseline_approximator,
                                    n_epochs=FLAGS.baseline_epochs,
