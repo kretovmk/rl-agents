@@ -1,7 +1,9 @@
 
 import tensorflow as tf
+import keras
 import numpy as np
 import subprocess
+import json
 import csv
 import os
 
@@ -67,3 +69,11 @@ def get_saver_paths(exp_dir):
     if not os.path.exists(monitor_path):
         os.makedirs(monitor_path)
     return checkpoint_dir, checkpoint_path, monitor_path
+
+
+def h5_to_json_weights(fn):
+    model = keras.models.load_model(fn)
+    json_string = model.to_json()
+    with open(fn[:-3] + '_json_model.json', 'w') as outfile:
+        json.dump(json_string, outfile)
+    model.save_weights(fn[:-3] + '_weights.h5')

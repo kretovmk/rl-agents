@@ -51,17 +51,19 @@ flags.DEFINE_integer('task', 0, 'number of task')
 
 FLAGS = flags.FLAGS
 
-env_proc_state_shape = (4, 105, 80)
-env_inp_state_shape = (4, 105, 80)
+env_proc_state_shape = (12, 105, 80)
+env_inp_state_shape = (12, 105, 80)
 logging_level = logging.INFO
 STATE_PROCESSOR = EmptyProcessor(inp_state_shape=env_inp_state_shape,
                                  proc_state_shape=env_proc_state_shape)
 
-fn = 'model_epoch99.h5'
+fn = 'model_epoch99_weights.h5'
 
 ###########################--OPTIONS END--###########################
 #####################################################################
 
+def load_keras_model(fn):
+    return keras.models.load_model(fn)
 
 if __name__ == '__main__':
     logger = logging.getLogger(__name__)
@@ -89,18 +91,25 @@ if __name__ == '__main__':
     logger.debug('checkpoint_dir: {}\n checkpoint_path: {}\n monitor_path: {}'\
                  .format(checkpoint_dir, checkpoint_path, monitor_path))
 
+
+
+
     # initializing session and components
     sess = tf.Session(server.target)
     worker_device = 'job:ps/task:0'
 
-    keras.backend.set_session(sess)
-
-    # pretrained_policy = keras.models.load_model(fn)
-    # pol_inp, pol_out = pretrained_policy.input, pretrained_policy.output
-    # pretrained_value = keras.models.load_model(fn)
-    # val_inp, val_out = pretrained_value.input, pretrained_value.output
+    # temp
+    # pol = load_keras_model(fn)
+    # val = load_keras_model(fn)
+    # with tf.device(tf.train.replica_device_setter(1, worker_device=worker_device)):
+    #     inp_pol = tf.placeholder(tf.float32, shape=(None,)+STATE_PROCESSOR.proc_shape)
+    #     out_pol = pol(inp_pol)
+    #     inp_val = tf.placeholder(tf.float32, shape=(None,)+STATE_PROCESSOR.proc_shape)
+    #     out_val = pol(inp_val)
 
     with tf.device(tf.train.replica_device_setter(1, worker_device=worker_device)):
+        #keras.backend.set_session(sess)
+        #print 'keras sess set'
         policy = NetworkCategorialConvKerasPretrained('policy',
                                                       inp_shape=STATE_PROCESSOR.proc_shape,
                                                       n_outputs=FLAGS.n_actions,

@@ -20,7 +20,7 @@ logger.setLevel(level=logging.INFO)
 
 ####################---OPTIONS Atari---################################
 inp_shape = (210, 160, 3)
-proc_shape = (4, 105, 80)
+proc_shape = (12, 105, 80)
 n_actions = 9
 STATE_PROCESSOR = EmptyProcessor(inp_state_shape=inp_shape,
                                  proc_state_shape=proc_shape)

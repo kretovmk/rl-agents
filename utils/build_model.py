@@ -45,17 +45,6 @@ def build_model(state_size, n_actions,
 
 
 NET_CONFIGS = {
-    'openai': {
-        'conv_filters': (32, 32, 32, 32),
-        'conv_sizes': (3, 3, 3, 3),
-        'conv_strides': (2, 2, 2, 2),
-        'pads': ['same']*4,
-        'conv_droputs': [0.0]*4,
-        'fc_sizes': (256,),
-        'fc_dropouts': [0.],
-        'batch_norm': True,
-        'activation': 'elu'
-    },
     'openai2': {
         'conv_filters': (32, 32, 32, 32),
         'conv_sizes': (6, 6, 6, 6),
@@ -80,11 +69,11 @@ NET_CONFIGS = {
     },
     'small_cnn': {
         'conv_filters': (32, 32, 32),
-        'conv_sizes': (16, 8, 6),
+        'conv_sizes': (8, 6, 4),
         'conv_strides': (4, 3, 2),
         'pads': ['valid'] * 3,
         'conv_droputs': [0.0] * 3,
-        'fc_sizes': (1024, ),
+        'fc_sizes': (512, ),
         'fc_dropouts': [0.,],
         'batch_norm': True,
         'activation': 'elu'

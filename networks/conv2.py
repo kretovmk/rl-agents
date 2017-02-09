@@ -1,10 +1,19 @@
 import tensorflow as tf
 import keras
+import json
 import numpy as np
 
+from tensorflow.python.client import device_lib
 from networks.base import NetworkBase
 from keras.layers import Conv2D, Dense, Input, Flatten, Dropout, BatchNormalization
 from keras.models import Model
+from utils.build_model import NET_CONFIGS, build_model
+
+
+
+def _build_network(inp_shape, n_actions):
+    return build_model(inp_shape, n_actions, **NET_CONFIGS['small_cnn'])
+
 
 
 class NetworkCategorialConvKerasPretrained(NetworkBase):
@@ -17,7 +26,8 @@ class NetworkCategorialConvKerasPretrained(NetworkBase):
         inp = tf.placeholder(shape=(None,) + self.inp_shape, dtype=tf.float32)
         with tf.variable_scope(self.scope):
             # loading pretrained actor model
-            model = keras.models.load_model(self.fn)
+            model = _build_network(self.inp_shape, self.n_outputs)
+            model.load_weights(self.fn)
             # only last layer weights are trained
             self.params = model.weights[-2:]
             out = model(inp)
@@ -36,7 +46,9 @@ class NetworkRegConvKerasPretrained(NetworkBase):
         targets = tf.placeholder(shape=(None, self.n_outputs), dtype=tf.float32)
         with tf.variable_scope(self.scope):
             # loading model pretrained actor model and replacing last layer with single neuron
-            m = keras.models.load_model(self.fn)
+            m = _build_network(self.inp_shape, 9)
+            m.load_weights(self.fn)
+            # deleting last layer
             inputs = m.layers[0].input
             output = Dense(1)(m.layers[-2].output)
             model = Model(input=inputs, output=output)
