@@ -1,7 +1,9 @@
 
 import argparse
 import os
+os.environ['KERAS_BACKEND'] = 'tensorflow'
 import keras.backend as K
+import tensorflow as tf
 
 from copy import copy
 from datetime import datetime
@@ -59,7 +61,9 @@ args = parser.parse_args()
 
 
 def run_training():
-    dirs = ['/home/dd210/Desktop/pacman/pacman_sasha_temp.tar.gz']
+    dirs = ['/home/user/deephack_data/pacman/pacman_dtm_hack.tar.gz',
+            '/home/user/deephack_data/pacman/pacman_hack.tar.gz',
+            '/home/user/deephack_data/pacman/pacman_hack2.tar.gz']
 
     # create save dir, if already exist raise error
     if not os.path.exists(args.out_model):
@@ -116,6 +120,10 @@ def run_training():
                       metrics=metrics)
 
     model.summary()
+
+    #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
+    #sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
+    #K.set_session(sess)
 
     try:
         model.fit_generator(
