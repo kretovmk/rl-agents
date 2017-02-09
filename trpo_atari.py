@@ -29,28 +29,28 @@ flags = tf.flags
 
 # general
 flags.DEFINE_boolean('load_checkpoint', False, 'loading checkpoint')
-flags.DEFINE_string('env_name', 'CartPole-v0', 'gym environment name')
-flags.DEFINE_boolean('atari_wrapper', False, 'gym environment name')
-flags.DEFINE_integer('max_env_steps', 1000, 'max number of steps in environment')
-flags.DEFINE_integer('n_actions', 2, 'number of actions')
+flags.DEFINE_string('env_name', 'MsPacman-v0', 'gym environment name')
+flags.DEFINE_boolean('atari_wrapper', True, 'gym environment name')
+flags.DEFINE_integer('max_env_steps', 10000, 'max number of steps in environment')
+flags.DEFINE_integer('n_actions', 9, 'number of actions')
 flags.DEFINE_string('exp_folder', '.', 'folder with experiments')
-flags.DEFINE_integer('n_workers', 2, 'number of workers')
+flags.DEFINE_integer('n_workers', 4, 'number of workers')
 flags.DEFINE_float('subsampling', 0.1, 'subsampling for appr calc of 2nd derivatives')
 # training
 flags.DEFINE_integer('n_iter', 1000, 'number of policy iterations')
-flags.DEFINE_integer('batch_size', 100000, 'batch size policy sampling')
+flags.DEFINE_integer('batch_size', 10000, 'batch size policy sampling')
 flags.DEFINE_integer('eval_freq', 1, 'frequency of evaluations')
 flags.DEFINE_float('gamma', 0.99, 'discounting factor gamma')
-flags.DEFINE_integer('baseline_epochs', 2, 'epochs when fitting baseline')
-flags.DEFINE_float('baseline_batch_size', 128, 'batch size for fitting baseline')
+flags.DEFINE_integer('baseline_epochs', 3, 'epochs when fitting baseline')
+flags.DEFINE_float('baseline_batch_size', 64, 'batch size for fitting baseline')
 # technical
 flags.DEFINE_integer('port', 15100, 'starting port')
 flags.DEFINE_integer('task', 0, 'number of task')
 
 FLAGS = flags.FLAGS
 
-env_proc_state_shape = (4, 84, 84)
-env_inp_state_shape = (4, 84, 84)
+env_proc_state_shape = (4, 105, 80)
+env_inp_state_shape = (4, 105, 80)
 logging_level = logging.INFO
 STATE_PROCESSOR = EmptyProcessor(inp_state_shape=env_inp_state_shape,
                                  proc_state_shape=env_proc_state_shape)
@@ -113,7 +113,8 @@ if __name__ == '__main__':
                                        n_actions=FLAGS.n_actions,
                                        state_processor=STATE_PROCESSOR,
                                        max_steps=FLAGS.max_env_steps,
-                                       gamma=FLAGS.gamma)
+                                       gamma=FLAGS.gamma,
+                                       atari_wrapper=FLAGS.atari_wrapper)
 
     # creating agent
     agent = TRPO(sess=sess,
@@ -124,7 +125,8 @@ if __name__ == '__main__':
                  sampler=parallel_sampler,
                  monitor_path=monitor_path,
                  state_shape=STATE_PROCESSOR.proc_shape,
-                 n_actions=FLAGS.n_actions)
+                 n_actions=FLAGS.n_actions,
+                 subsampling=FLAGS.subsampling)
 
     # loading variables from checkpoint if applicable
     saver = tf.train.Saver()

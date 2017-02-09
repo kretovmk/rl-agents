@@ -1,4 +1,5 @@
 
+import time
 import logging
 import tensorflow as tf
 import numpy as np
@@ -134,10 +135,16 @@ class TRPO(BatchPolicyBase):
 
         prev_params = self.get_flat()
         # accurate calc of gradient
+        t = time.time()
         grad = self.sess.run(self.policy_grad, feed_dict=feed_dict)
+        print t - time.time()
         # approximate calc of step direction
+        t = time.time()
         step_direction = conjugate_gradient(fisher_vector_product, -grad)
+        print t - time.time()
+        t = time.time()
         shs = 0.5 * step_direction.dot(fisher_vector_product(step_direction))
+        print t - time.time()
         step_max = np.sqrt(shs / max_kl)
         fullstep = step_direction / step_max
         neggdotstepdir = -grad.dot(step_direction)

@@ -19,15 +19,15 @@ logger.setLevel(level=logging.INFO)
 
 
 ####################---OPTIONS Atari---################################
-# inp_shape = (210, 160, 3)
-# proc_shape = (4, 84, 84)
-# n_actions = 9
-# STATE_PROCESSOR = EmptyProcessor(inp_state_shape=inp_shape,
-#                                  proc_state_shape=proc_shape)
-# POLICY = NetworkCategorialConvKeras(scope='policy',
-#                                     inp_shape=STATE_PROCESSOR.proc_shape,
-#                                     n_outputs=n_actions)
-# ATARI_WRAPPER = True
+inp_shape = (210, 160, 3)
+proc_shape = (4, 105, 80)
+n_actions = 9
+STATE_PROCESSOR = EmptyProcessor(inp_state_shape=inp_shape,
+                                 proc_state_shape=proc_shape)
+POLICY = NetworkCategorialConvKeras(scope='policy',
+                                    inp_shape=STATE_PROCESSOR.proc_shape,
+                                    n_outputs=n_actions)
+ATARI_WRAPPER = True
 #######################################################################
 
 ####################---OPTIONS Mountain car---#########################
@@ -44,16 +44,16 @@ logger.setLevel(level=logging.INFO)
 #######################################################################
 
 ###################---OPTIONS Cartpole---#############################
-inp_shape = (4,)
-proc_shape = (4,)
-n_actions = 2
-STATE_PROCESSOR = EmptyProcessor(inp_state_shape=inp_shape,
-                                 proc_state_shape=proc_shape)
-POLICY = NetworkCategorialDense(n_hidden=(32,),
-                                scope='policy',
-                                inp_shape=STATE_PROCESSOR.proc_shape,
-                                n_outputs=n_actions)
-ATARI_WRAPPER = False
+# inp_shape = (4,)
+# proc_shape = (4,)
+# n_actions = 2
+# STATE_PROCESSOR = EmptyProcessor(inp_state_shape=inp_shape,
+#                                  proc_state_shape=proc_shape)
+# POLICY = NetworkCategorialDense(n_hidden=(32,),
+#                                 scope='policy',
+#                                 inp_shape=STATE_PROCESSOR.proc_shape,
+#                                 n_outputs=n_actions)
+# ATARI_WRAPPER = False
 #######################################################################
 
 
