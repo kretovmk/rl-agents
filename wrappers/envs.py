@@ -13,7 +13,7 @@ def _process_frame(frame, rgb):
     return frame
 
 class AtariStackFrames(object):
-    def __init__(self, env, n_frames=4, rgb=False):
+    def __init__(self, env, n_frames=4, rgb=True):
         self.env = env
         self.rgb = rgb
         self.action_space = self.env.action_space

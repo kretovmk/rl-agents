@@ -8,6 +8,7 @@ import sys
 import os
 
 from networks.dense import NetworkCategorialDense
+from networks.conv2 import NetworkCategorialConvKerasPretrained
 from networks.conv import NetworkCategorialConvKeras
 from utils.math import discount_rewards
 from utils.tf_utils import cluster_spec
@@ -24,9 +25,13 @@ proc_shape = (12, 105, 80)
 n_actions = 9
 STATE_PROCESSOR = EmptyProcessor(inp_state_shape=inp_shape,
                                  proc_state_shape=proc_shape)
-POLICY = NetworkCategorialConvKeras(scope='policy',
-                                    inp_shape=STATE_PROCESSOR.proc_shape,
-                                    n_outputs=n_actions)
+# POLICY = NetworkCategorialConvKeras(scope='policy',
+#                                     inp_shape=STATE_PROCESSOR.proc_shape,
+#                                     n_outputs=n_actions)
+POLICY = NetworkCategorialConvKerasPretrained('policy',
+                                              inp_shape=proc_shape,
+                                              n_outputs=n_actions,
+                                              fn='model_epoch99.h5')
 ATARI_WRAPPER = True
 #######################################################################
 
@@ -105,7 +110,7 @@ if __name__ == '__main__':
     print 'worker {} launched, server target: \"{}\"'.format(task, server.target)
 
     # creating queues
-    with tf.device('job:ps/task:0'):
+    with tf.device('job:localhost/task:0'):
         queue_ps = tf.FIFOQueue(capacity=1, dtypes=tf.int32, shapes=(), shared_name='queue_ps')
         queue_sampled = tf.FIFOQueue(capacity=max_buf_size, dtypes=tf.float32,
                                      shapes=(flatten_dim,), shared_name='queue_sampled')

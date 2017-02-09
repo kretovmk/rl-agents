@@ -6,7 +6,7 @@ import numpy as np
 def cluster_spec(n_workers=2, port=12333):
     cluster = {}
     host = '127.0.0.1'
-    cluster['ps'] = ['{}:{}'.format(host, port)]
+    cluster['localhost'] = ['{}:{}'.format(host, port)]
     port += 1
     all_workers = []
     for _ in range(n_workers):

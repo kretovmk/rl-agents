@@ -33,7 +33,7 @@ class ParallelSampler(object):
 
         # creating queues
         flatten_dim = np.prod(state_processor.proc_shape) + 1 + 1 + n_actions + 1  # states, act, rew, prob_act, ret
-        with tf.device('job:ps/task:0'):
+        with tf.device('job:localhost/task:0'):
             self.queue_ps = tf.FIFOQueue(capacity=1, dtypes=tf.int32, shapes=(), shared_name='queue_ps')
             self.queue_sampled = tf.FIFOQueue(capacity=max_buf_size, dtypes=tf.float32,
                                          shapes=(flatten_dim,), shared_name='queue_sampled')

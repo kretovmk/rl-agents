@@ -33,14 +33,14 @@ flags = tf.flags
 flags.DEFINE_boolean('load_checkpoint', False, 'loading checkpoint')
 flags.DEFINE_string('env_name', 'MsPacman-v0', 'gym environment name')
 flags.DEFINE_boolean('atari_wrapper', True, 'gym environment name')
-flags.DEFINE_integer('max_env_steps', 10000, 'max number of steps in environment')
+flags.DEFINE_integer('max_env_steps', 30, 'max number of steps in environment')
 flags.DEFINE_integer('n_actions', 9, 'number of actions')
 flags.DEFINE_string('exp_folder', '.', 'folder with experiments')
-flags.DEFINE_integer('n_workers', 2, 'number of workers')
+flags.DEFINE_integer('n_workers', 1, 'number of workers')
 flags.DEFINE_float('subsampling', 0.1, 'subsampling for appr calc of 2nd derivatives')
 # training
 flags.DEFINE_integer('n_iter', 1000, 'number of policy iterations')
-flags.DEFINE_integer('batch_size', 10000, 'batch size policy sampling')
+flags.DEFINE_integer('batch_size', 50, 'batch size policy sampling')
 flags.DEFINE_integer('eval_freq', 1, 'frequency of evaluations')
 flags.DEFINE_float('gamma', 0.99, 'discounting factor gamma')
 flags.DEFINE_integer('baseline_epochs', 3, 'epochs when fitting baseline')
@@ -57,7 +57,7 @@ logging_level = logging.INFO
 STATE_PROCESSOR = EmptyProcessor(inp_state_shape=env_inp_state_shape,
                                  proc_state_shape=env_proc_state_shape)
 
-fn = 'model_epoch99_weights.h5'
+fn = 'model_epoch99.h5'
 
 ###########################--OPTIONS END--###########################
 #####################################################################
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     # launching parameter server -- also non-parallel calculations here
     spec = tf.train.ClusterSpec(cluster_spec(n_workers=FLAGS.n_workers, port=FLAGS.port))
     logger.info('Cluster spec: \n{}'.format(cluster_spec(n_workers=FLAGS.n_workers, port=FLAGS.port)))
-    server = tf.train.Server(spec, job_name='ps', task_index=0)
+    server = tf.train.Server(spec, job_name='localhost', task_index=0)
     logger.info('Parameter server {} launched, server target: \"{}\"'.format(0, server.target))
     sess = tf.Session(server.target)
 
@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
     # initializing session and components
     sess = tf.Session(server.target)
-    worker_device = 'job:ps/task:0'
+    worker_device = 'job:localhost/task:0'
 
     # temp
     # pol = load_keras_model(fn)
@@ -107,8 +107,7 @@ if __name__ == '__main__':
     #     inp_val = tf.placeholder(tf.float32, shape=(None,)+STATE_PROCESSOR.proc_shape)
     #     out_val = pol(inp_val)
 
-    with tf.device(tf.train.replica_device_setter(1, worker_device=worker_device)):
-        #keras.backend.set_session(sess)
+    with tf.device(tf.train.replica_device_setter(1, worker_device=worker_device, ps_device=worker_device)):
         #print 'keras sess set'
         policy = NetworkCategorialConvKerasPretrained('policy',
                                                       inp_shape=STATE_PROCESSOR.proc_shape,
