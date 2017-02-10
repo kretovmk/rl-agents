@@ -88,7 +88,7 @@ class GymEnvMod(GymEnv):
         obs = self._process_frame(self.env.reset())
         frame = obs.astype(np.float32)
         frame *= (1.0 / 255.0)
-        for _ in xrange(self.n_frames):
+        for _ in range(self.n_frames):
             self.buffer.append(frame)
         res = np.array(self.buffer)
         res = np.transpose(res, (0, 3, 1, 2)).reshape((self.n_frames*3, 105, 80))

@@ -2,7 +2,7 @@
 import os
 
 os.environ['KERAS_BACKEND'] = 'theano'
-os.environ['THEANO_FLAGS'] = 'device=cpu'
+os.environ['THEANO_FLAGS'] = 'device=gpu'
 
 from rllab.algos.trpo import TRPO
 from rllab.baselines.linear_feature_baseline import LinearFeatureBaseline
@@ -27,7 +27,7 @@ def run_task(*_):
         env=env,
         policy=policy,
         baseline=baseline,
-        batch_size=50000,
+        batch_size=100000,
         max_path_length=30000,
         n_itr=1000,
         discount=0.99,
@@ -38,6 +38,6 @@ def run_task(*_):
 
 run_experiment_lite(
     run_task,
-    n_parallel=4,
+    n_parallel=1,
     seed=1,
 )
