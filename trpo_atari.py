@@ -1,5 +1,9 @@
 
 import os
+
+os.environ['KERAS_BACKEND'] = 'tensorflow'
+os.environ['CUDA_VISIBLE_DEVICES'] = ''
+
 import gym
 import keras
 import signal
@@ -40,7 +44,7 @@ flags.DEFINE_integer('n_workers', 4, 'number of workers')
 flags.DEFINE_float('subsampling', 0.1, 'subsampling for appr calc of 2nd derivatives')
 # training
 flags.DEFINE_integer('n_iter', 1000, 'number of policy iterations')
-flags.DEFINE_integer('batch_size', 10000, 'batch size policy sampling')
+flags.DEFINE_integer('batch_size', 5000, 'batch size policy sampling')
 flags.DEFINE_integer('eval_freq', 1, 'frequency of evaluations')
 flags.DEFINE_float('gamma', 0.99, 'discounting factor gamma')
 flags.DEFINE_integer('baseline_epochs', 3, 'epochs when fitting baseline')
