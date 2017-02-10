@@ -62,7 +62,7 @@ class BatchPolicyBase(object):
             logger.info('Collected samples, took {:.2f} sec'.format(time.time() - start_time))
 
             start_time = time.time()
-            self.baseline.fit({k: v[:2000] for k, v in samples.iteritems()})  # TODO: fix this..
+            self.baseline.fit(samples)
             samples = self.baseline.predict_value(samples)
             logger.info('Fitted baseline, took {:.2f} sec'.format(time.time() - start_time))
 

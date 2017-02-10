@@ -15,7 +15,7 @@ from sandbox.rocky.tf.optimizers.conjugate_gradient_optimizer import ConjugateGr
 
 #stub(globals())
 
-ENV_NAME = 'Pong-v0'
+ENV_NAME = 'MsPacman-v0'
 
 env = TfEnv(GymEnvMod(env_name=ENV_NAME))
 
@@ -39,10 +39,10 @@ algo = TRPO(
     env=env,
     policy=policy,
     baseline=baseline,
-    batch_size=5000,
-    max_path_length=300,
+    batch_size=50000,
+    max_path_length=30000,
     n_itr=1000,
-    discount=1.0,
+    discount=0.99,
     step_size=0.01,
     optimizer=ConjugateGradientOptimizer(subsample_factor=0.1)
 )

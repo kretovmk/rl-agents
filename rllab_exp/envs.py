@@ -26,9 +26,11 @@ NEW_SHAPE = (105, 80)
 
 class GymEnvMod(GymEnv):
     def __init__(self, env_name, record_video=True, video_schedule=None, log_dir=None, record_log=True,
-                 force_reset=False):
+                 force_reset=False, n_frames=4):
         full_model = keras.models.load_model('/exp/model_epoch29.h5')
+        self.n_frames = n_frames
         self.premodel = keras.models.Model(input=full_model.layers[0].input, output=full_model.layers[-3].output)
+        #keras.backend.set_learning_phase(0)
         if log_dir is None:
             if logger.get_snapshot_dir() is None:
                 logger.log("Warning: skipping Gym environment monitoring since snapshot_dir not configured.")
@@ -43,7 +45,7 @@ class GymEnvMod(GymEnv):
         self.env_id = env.spec.id
 
         self._checkpoint_buffer = []
-        self.buffer = deque(maxlen=4)
+        self.buffer = deque(maxlen=self.n_frames)
 
         #monitor_manager.logger.setLevel(logging.WARNING)
 
@@ -60,7 +62,6 @@ class GymEnvMod(GymEnv):
             self.env = gym.wrappers.Monitor(self.env, log_dir, video_callable=video_schedule, force=True)
             self.monitoring = True
 
-        #self._observation_space = convert_gym_space(env.observation_space)
         self._observation_space = convert_gym_space(env.observation_space)
         self._action_space = convert_gym_space(env.action_space)
         self._horizon = env.spec.timestep_limit
@@ -75,8 +76,8 @@ class GymEnvMod(GymEnv):
         s *= (1.0 / 255.0)
         self.buffer.append(s)
         s = np.array(self.buffer)
-        s = np.transpose(s, (0, 3, 1, 2)).reshape((12, 105, 80))
-        s = self.premodel.predict([s])
+        s = np.transpose(s, (0, 3, 1, 2)).reshape((3*self.n_frames, 105, 80))
+        s = self.premodel.predict(np.expand_dims(s, 0)).reshape((-1))
         return Step(s, reward, done, **info)
 
     def reset(self):
@@ -92,7 +93,7 @@ class GymEnvMod(GymEnv):
             self.buffer.append(frame)
         res = np.array(self.buffer)
         res = np.transpose(res, (0, 3, 1, 2)).reshape((self.n_frames*3, 105, 80))
-        res = self.premodel.predict([res])
+        res = self.premodel.predict(np.expand_dims(res, 0)).reshape((-1))
         return res
 
     def _process_frame(self, frame):
