@@ -29,7 +29,7 @@ env = TfEnv(GymEnvMod(env_name=ENV_NAME))
 policy = CategoricalMLPPolicy(
     name="policy",
     env_spec=env.spec,
-    prob_network=conv,
+    hidden_sizes=()
 )
 
 baseline = LinearFeatureBaseline(env_spec=env.spec)
