@@ -39,12 +39,12 @@ algo = TRPO(
     env=env,
     policy=policy,
     baseline=baseline,
-    batch_size=50000,
-    max_path_length=30000,
+    batch_size=5000,
+    max_path_length=300,
     n_itr=1000,
     discount=1.0,
     step_size=0.01,
-    optimizer=ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5))
+    optimizer=ConjugateGradientOptimizer(subsample_factor=0.1)
 )
 
 algo.train()
