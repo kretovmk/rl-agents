@@ -19,13 +19,6 @@ ENV_NAME = 'MsPacman-v0'
 
 env = TfEnv(GymEnvMod(env_name=ENV_NAME))
 
-# conv = ConvNetwork(name='CNN', input_shape=(105, 80, 1), output_dim=6,
-#                  conv_filters=(16, 32), conv_filter_sizes=(9, 5), conv_strides=(4, 2), conv_pads=('SAME', 'SAME'),
-#                  hidden_sizes=(256,), hidden_nonlinearity=tf.nn.relu, output_nonlinearity=tf.nn.softmax)
-#
-# mlp = MLP(name='MLP', input_shape=(8400,), output_dim=6, hidden_sizes=(256,), hidden_nonlinearity=tf.nn.relu,
-#                  output_nonlinearity=tf.nn.softmax)
-
 policy = CategoricalMLPPolicy(
     name="policy",
     env_spec=env.spec,
