@@ -1,5 +1,8 @@
 
-import rllab
+import os
+
+os.environ['KERAS_BACKEND'] = 'theano'
+os.environ['THEANO_FLAGS'] = 'device=cpu'
 
 from rllab.algos.trpo import TRPO
 from rllab.baselines.linear_feature_baseline import LinearFeatureBaseline
