@@ -32,7 +32,7 @@ def run_task(*_):
         n_itr=1000,
         discount=0.99,
         step_size=0.01,
-        optimizer=ConjugateGradientOptimizer(subsample_factor=0.1)
+        optimizer=ConjugateGradientOptimizer(subsample_factor=0.99)
     )
     algo.train()
 

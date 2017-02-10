@@ -27,8 +27,9 @@ class GymEnvMod(GymEnv):
     def __init__(self, env_name, record_video=False, video_schedule=None, log_dir=None, record_log=True,
                  force_reset=False, n_frames=4):
         full_model = keras.models.load_model('model_epoch29.h5')
+        print(full_model.summary())
         self.n_frames = n_frames
-        self.premodel = keras.models.Model(input=full_model.layers[0].input, output=full_model.layers[-3].output)
+        self.premodel = keras.models.Model(input=full_model.layers[0].input, output=full_model.layers[-2].output)
         #keras.backend.set_learning_phase(0)
         if log_dir is None:
             if logger.get_snapshot_dir() is None:
