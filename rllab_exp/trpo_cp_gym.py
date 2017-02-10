@@ -19,12 +19,10 @@ env = TfEnv(GymEnv('CartPole-v0'))
 policy = CategoricalMLPPolicy(
     name="policy",
     env_spec=env.spec,
-    # The neural network policy should have two hidden layers, each with 32 hidden units.
-    hidden_sizes=(16,)
+    hidden_sizes=()
 )
 
 baseline = LinearFeatureBaseline(env_spec=env.spec)
-#baseline = ZeroBaseline(env_spec=env.spec)
 
 algo = TRPO(
     env=env,

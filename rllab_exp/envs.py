@@ -1,8 +1,15 @@
 
+
 import os
+os.system('pip install keras')
+os.environ['KERAS_BACKEND'] = 'theano'
+
 import cv2
 import gym
+import keras
 import numpy as np
+
+
 
 #from gym.monitoring import monitor_manager
 from rllab.envs.base import Env, Step
@@ -11,6 +18,7 @@ from rllab.envs.gym_env import GymEnv, FixedIntervalVideoSchedule, NoVideoSchedu
 from rllab.core.serializable import Serializable
 from rllab.misc import logger
 from gym.spaces import Box
+from collections import deque
 
 
 NEW_SHAPE = (105, 80)
@@ -19,6 +27,8 @@ NEW_SHAPE = (105, 80)
 class GymEnvMod(GymEnv):
     def __init__(self, env_name, record_video=True, video_schedule=None, log_dir=None, record_log=True,
                  force_reset=False):
+        full_model = keras.models.load_model('/exp/model_epoch29.h5')
+        self.premodel = keras.models.Model(input=full_model.layers[0].input, output=full_model.layers[-3].output)
         if log_dir is None:
             if logger.get_snapshot_dir() is None:
                 logger.log("Warning: skipping Gym environment monitoring since snapshot_dir not configured.")
@@ -27,9 +37,13 @@ class GymEnvMod(GymEnv):
         Serializable.quick_init(self, locals())
 
         env = gym.envs.make(env_name)
-        env.observation_space = Box(low=0., high=1., shape=NEW_SHAPE)
+        #env.observation_space = Box(low=0., high=1., shape=NEW_SHAPE)
+        env.observation_space = Box(low=-float('inf'), high=float('inf'), shape=(256,))
         self.env = env
         self.env_id = env.spec.id
+
+        self._checkpoint_buffer = []
+        self.buffer = deque(maxlen=4)
 
         #monitor_manager.logger.setLevel(logging.WARNING)
 
@@ -55,20 +69,32 @@ class GymEnvMod(GymEnv):
 
 
     def step(self, action):
-        next_obs, reward, done, info = self.env.step(action)
-        next_obs = self._process_frame(next_obs)
-        return Step(next_obs, reward, done, **info)
+        s, reward, done, info = self.env.step(action)
+        s = self._process_frame(s)
+        s = s.astype(np.float32)
+        s *= (1.0 / 255.0)
+        self.buffer.append(s)
+        s = np.array(self.buffer)
+        s = np.transpose(s, (0, 3, 1, 2)).reshape((12, 105, 80))
+        s = self.premodel.predict([s])
+        return Step(s, reward, done, **info)
 
     def reset(self):
+        self.buffer.clear()
         if self._force_reset and self.monitoring:
             recorder = self.env._monitor.stats_recorder
             if recorder is not None:
                 recorder.done = True
         obs = self._process_frame(self.env.reset())
-        return obs
+        frame = obs.astype(np.float32)
+        frame *= (1.0 / 255.0)
+        for _ in xrange(self.n_frames):
+            self.buffer.append(frame)
+        res = np.array(self.buffer)
+        res = np.transpose(res, (0, 3, 1, 2)).reshape((self.n_frames*3, 105, 80))
+        res = self.premodel.predict([res])
+        return res
 
     def _process_frame(self, frame):
-        frame = cv2.resize(frame, NEW_SHAPE)
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        frame = 255 - frame
-        return np.expand_dims(frame, 0) / 255.
+        frame = cv2.resize(frame, (80, 105))
+        return frame
