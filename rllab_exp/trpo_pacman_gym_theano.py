@@ -27,7 +27,7 @@ def run_task(*_):
         env=env,
         policy=policy,
         baseline=baseline,
-        batch_size=100000,
+        batch_size=200000,
         max_path_length=30000,
         n_itr=1000,
         discount=0.99,

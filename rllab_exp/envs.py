@@ -26,7 +26,7 @@ NEW_SHAPE = (105, 80)
 class GymEnvMod(GymEnv):
     def __init__(self, env_name, record_video=False, video_schedule=None, log_dir=None, record_log=True,
                  force_reset=False, n_frames=4):
-        full_model = keras.models.load_model('model_epoch29.h5')
+        full_model = keras.models.load_model('model_final.h5')
         print(full_model.summary())
         self.n_frames = n_frames
         self.premodel = keras.models.Model(input=full_model.layers[0].input, output=full_model.layers[-2].output)
